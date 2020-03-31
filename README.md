@@ -2,33 +2,33 @@
 
 ![example-image](example-image.png)
 
-Create an app that lets you browse and interact with UI you've created.
+### Create an app that lets you browse and interact with UI you've created.
 
-_Why not use one of the several other UI viewing packages like [alexkorban/uicards](https://package.elm-lang.org/packages/alexkorban/uicards/latest/), [kalutheo/elm-ui-explorer](https://package.elm-lang.org/packages/kalutheo/elm-ui-explorer/latest/), [miyamoen/bibliopola](https://package.elm-lang.org/packages/miyamoen/bibliopola/latest/), and [owanturist/elm-bulletproof](https://package.elm-lang.org/packages/owanturist/elm-bulletproof/latest/)`?_
+_Why not use one of the several other UI viewing packages like [`alexkorban/uicards`](https://package.elm-lang.org/packages/alexkorban/uicards/latest/), [`kalutheo/elm-ui-explorer`](https://package.elm-lang.org/packages/kalutheo/elm-ui-explorer/latest/), [`miyamoen/bibliopola`](https://package.elm-lang.org/packages/miyamoen/bibliopola/latest/), and [`owanturist/elm-bulletproof`](https://package.elm-lang.org/packages/owanturist/elm-bulletproof/latest/)`?_
 
 Most of these packages don't support interacting with UI beyond adding extra buttons to toggle the UIs appearance.
 An exception is `alexkorban/uicards` but it requires that all your UIs have the same msg and model type.
 ## Example app
 
 Here's a small example app with 3 pages. The first two pages show static content and the last page is interactive.
-To get it working just swap out "MyCoolWidgets" with whatever you want to show.
+To get it working, swap out "MyCoolUi" with whatever you want to show.
 ```elm
-import MyCoolWidgets
+import MyCoolUi
 import UiExplorer
 
 pages =
-    UiExplorer.firstPage "Button" (UiExplorer.static MyCoolWidgets.button)
-        |> UiExplorer.nextPage "Footer" (UiExplorer.static MyCoolWidgets.footer)
+    UiExplorer.firstPage "Button" (UiExplorer.static MyCoolUi.button)
+        |> UiExplorer.nextPage "Footer" (UiExplorer.static MyCoolUi.footer)
         |> UiExplorer.nextPage
             "Login Form"
-            { init = MyCoolWidgets.loginInit
-            , update = MyCoolWidgets.loginUpdate
-            , view = \pageSize model -> MyCoolWidgets.loginView model
+            { init = MyCoolUi.loginInit
+            , update = MyCoolUi.loginUpdate
+            , view = \pageSize model -> MyCoolUi.loginView model
             , subscriptions = always Sub.none
             }
 
 main =
-    UiExplorer.application UiExplorer.defaultConfig pageser
+    UiExplorer.application UiExplorer.defaultConfig pages
 ```
 
-If you want to see a real world use cases then there's [also this]().
+For a real world use case there's [also this]().

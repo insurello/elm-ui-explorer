@@ -1,6 +1,6 @@
 module UiExplorer exposing
     ( application, defaultConfig, ApplicationConfig, Model, Msg, PageMsg
-    , firstPage, nextPage, static, Page, PageBuilder, PageSize
+    , firstPage, nextPage, static, Page, PageSize, PageBuilder
     )
 
 {-| Create an app that lets you browse and interact with UI you've created.
@@ -8,7 +8,8 @@ module UiExplorer exposing
 ![example-image](example-image.png)
 In the example above, the panel to the left is called the sidebar and the page selected in it is shown in the remaining space to the right.
 
-Note that this package is built primarily for UI created with mdgriffith/elm-ui, you can still use elm/html if you convert it into an elm-ui Element with `Element.html`.
+Note that this package is built primarily for UI created with [`mdgriffith/elm-ui`](https://package.elm-lang.org/packages/mdgriffith/elm-ui/latest/).
+You can still use `elm/html` with [`Element.html`](https://package.elm-lang.org/packages/mdgriffith/elm-ui/latest/Element#html) though.
 
 
 # Application
@@ -19,9 +20,9 @@ Note that this package is built primarily for UI created with mdgriffith/elm-ui,
 # Pages
 
 A "page" is something you can select in the sidebar to display when the app is running.
-Pages can contain a single widget, tables showing every variation of your button components, or your entire login page, it's up to you!
+Pages can contain a single widgets, tables showing every variation of your button components, or an entire login page. It's up to you!
 
-@docs firstPage, nextPage, static, Page, PageBuilder, PageSize
+@docs firstPage, nextPage, static, Page, PageSize, PageBuilder
 
 -}
 
@@ -77,7 +78,7 @@ firstPage id config =
 {-| The size of the page your UI gets placed in.
 This is not the same as `Browser.Events.resize` since the UI explorer displays a sidebar that can take up some of the window space.
 
-Note that you'll need to run `elm install ianmackenzie/elm-units` in order to use `Quantity Int Pixels`. After you do that you can write something like this
+You'll need [`ianmackenzie/elm-units`](https://package.elm-lang.org/packages/ianmackenzie/elm-units/latest/) in order to use `Quantity Int Pixels`.
 
     import Pixels
 
@@ -92,13 +93,13 @@ type alias PageSize =
 
 {-| All the functions you need for wiring together an interactive page. It's basically just `Browser.element`.
 
-    import MyCoolWidgets
+    import MyCoolUi
     import UiExplorer
 
     loginPage =
-        { init = MyCoolWidgets.loginInit
-        , update = MyCoolWidgets.loginUpdate
-        , view = \pageSize model -> MyCoolWidgets.loginView model
+        { init = MyCoolUi.loginInit
+        , update = MyCoolUi.loginUpdate
+        , view = \pageSize model -> MyCoolUi.loginView model
         , subscriptions = always Sub.none
         }
 
@@ -142,7 +143,9 @@ type PageMsg previous current
     | Current current
 
 
-{-| Additional pages in your UI explorer. You have to start with `firstPage` before chaining the result to `nextPage`s. Each page must also have a unique name.
+{-| Additional pages in your UI explorer.
+You have to start with `firstPage` before chaining the result to `nextPage`s.
+Each page must also have a unique name.
 
     import Element
     import UiExplorer
@@ -704,8 +707,8 @@ subscriptions _ =
 
 {-| Settings we can change when creating our UI explorer application.
 
--`flagsDecoder` lets us parse json flags we pass to our app. This gets passed along to the init function in our pages (or the view function if you're creating a static page).
--`layoutOptions` and `layoutAttributes` are used in our app's Element.layoutWith to control things like the default font or Element.focusStyle
+  - `flagsDecoder` lets us parse json flags we pass to our app. This gets passed along to the init function in our pages (or the view function if you're creating a static page).
+  - `layoutOptions` and `layoutAttributes` are used in our app's Element.layoutWith to control things like the default font or Element.focusStyle
 
 -}
 type alias ApplicationConfig msg flags =
@@ -727,17 +730,17 @@ defaultConfig =
 
 {-| Here we create our UI explorer app.
 
-    import MyCoolWidgets
+    import MyCoolUi
     import UiExplorer
 
     pages =
-        UiExplorer.firstPage "Button" (UiExplorer.static MyCoolWidgets.button)
-            |> UiExplorer.nextPage "Footer" (UiExplorer.static MyCoolWidgets.footer)
+        UiExplorer.firstPage "Button" (UiExplorer.static MyCoolUi.button)
+            |> UiExplorer.nextPage "Footer" (UiExplorer.static MyCoolUi.footer)
             |> UiExplorer.nextPage
                 "Login Form"
-                { init = MyCoolWidgets.loginInit
-                , update = MyCoolWidgets.loginUpdate
-                , view = \pageSize model -> MyCoolWidgets.loginView model
+                { init = MyCoolUi.loginInit
+                , update = MyCoolUi.loginUpdate
+                , view = \pageSize model -> MyCoolUi.loginView model
                 , subscriptions = always Sub.none
                 }
 
@@ -745,8 +748,8 @@ defaultConfig =
         UiExplorer.application UiExplorer.defaultConfig pages
 
 Note that we didn't add type signatures for `pages` and `main` in the example.
-If we did, we'd have to update it every time we add a new page.
-Also the type signature gets very long and very ugly.
+If we did, we'd have to update it every time we add a new page and the type signatures would get messy.
+Instead it's best to just let the compiler infer it automatically.
 
 -}
 application :
