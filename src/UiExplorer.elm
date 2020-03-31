@@ -604,14 +604,15 @@ onKey msg =
             (Decode.field "key" Decode.string
                 |> Decode.andThen
                     (\key ->
-                        if key == "ArrowUp" then
-                            Decode.succeed { message = msg ArrowUp, stopPropagation = True, preventDefault = True }
+                        case key of
+                            "ArrowUp" ->
+                                Decode.succeed { message = msg ArrowUp, stopPropagation = True, preventDefault = True }
 
-                        else if key == "ArrowDown" then
-                            Decode.succeed { message = msg ArrowDown, stopPropagation = True, preventDefault = True }
+                            "ArrowDown" ->
+                                Decode.succeed { message = msg ArrowDown, stopPropagation = True, preventDefault = True }
 
-                        else
-                            Decode.fail "Not the enter key"
+                            _ ->
+                                Decode.fail "Not the up or down arrow key."
                     )
             )
         )
