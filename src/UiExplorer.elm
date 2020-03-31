@@ -1,7 +1,6 @@
 module UiExplorer exposing
-    ( application, defaultConfig, ApplicationConfig, Model, Msg
-    , firstPage, nextPage, static, Page, PageBuilder
-    , PageMsg, PageSize
+    ( application, defaultConfig, ApplicationConfig, Model, Msg, PageMsg
+    , firstPage, nextPage, static, Page, PageBuilder, PageSize
     )
 
 {-| Create an app that lets you browse and interact with UI you've created.
@@ -14,7 +13,7 @@ Note that this package is built primarily for UI created with mdgriffith/elm-ui,
 
 # Application
 
-@docs application, defaultConfig, ApplicationConfig, Model, Msg
+@docs application, defaultConfig, ApplicationConfig, Model, Msg, PageMsg
 
 
 # Pages
@@ -22,7 +21,7 @@ Note that this package is built primarily for UI created with mdgriffith/elm-ui,
 A "page" is something you can select in the sidebar to display when the app is running.
 Pages can contain a single widget, tables showing every variation of your button components, or your entire login page, it's up to you!
 
-@docs firstPage, nextPage, static, Page, PageBuilder, WindowSize
+@docs firstPage, nextPage, static, Page, PageBuilder, PageSize
 
 -}
 
