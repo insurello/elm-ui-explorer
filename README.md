@@ -8,6 +8,7 @@ _Why not use one of the several other UI viewing packages like [`alexkorban/uica
 
 Most of these packages don't support interacting with UI beyond adding extra buttons to toggle the UIs appearance.
 An exception is `alexkorban/uicards` but it requires that all your UIs have the same msg and model type.
+
 ## Example app
 
 Here's a small example app with 3 pages. The first two pages show static content and the last page is interactive.

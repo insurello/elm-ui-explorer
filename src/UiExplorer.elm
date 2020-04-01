@@ -47,7 +47,7 @@ import Url.Builder
 import Url.Parser exposing ((</>))
 
 
-{-| The first page in your UI explorer. This the default page if the user doesn't specify a url path.
+{-| The first page in your UI explorer. This is the default page if the user doesn't specify a url path.
 
     import Element
     import UiExplorer
@@ -144,7 +144,7 @@ type PageMsg previous current
 
 
 {-| Additional pages in your UI explorer.
-You have to start with `firstPage` before chaining the result to `nextPage`s.
+You have to start with [`firstPage`](#firstPage) before chaining the result to `nextPage`s.
 Each page must also have a unique name.
 
     import Element
@@ -708,7 +708,7 @@ subscriptions _ =
 {-| Settings we can change when creating our UI explorer application.
 
   - `flagsDecoder` lets us parse json flags we pass to our app. This gets passed along to the init function in our pages (or the view function if you're creating a static page).
-  - `layoutOptions` and `layoutAttributes` are used in our app's Element.layoutWith to control things like the default font or Element.focusStyle
+  - `layoutOptions` and `layoutAttributes` are used in our app's [Element.layoutWith](https://package.elm-lang.org/packages/mdgriffith/elm-ui/latest/Element#layoutWith) to control things like the default font or focusStyle.
 
 -}
 type alias ApplicationConfig msg flags =
