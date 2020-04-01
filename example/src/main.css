@@ -13,8 +13,8 @@
 .spinner,
 .spinner:after {
   border-radius: 50%;
-  width: 5em;
-  height: 5em;
+  width: 3em;
+  height: 3em;
 }
 .spinner {
   font-size: 10px;
