@@ -5,7 +5,7 @@ module UiExplorer exposing
 
 {-| Create an app that lets you browse and interact with UI you've created.
 
-![example-image](example-image.png)
+![example-image](https://raw.githubusercontent.com/insurello/elm-ui-explorer/master/example-image.png)
 In the example above, the panel to the left is called the sidebar and the page selected in it is shown in the remaining space to the right.
 
 Note that this package is built primarily for UI created with [`mdgriffith/elm-ui`](https://package.elm-lang.org/packages/mdgriffith/elm-ui/latest/).

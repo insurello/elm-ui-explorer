@@ -1,10 +1,10 @@
 # elm-ui-explorer
 
-![example-image](example-image.png)
+![example-image](https://raw.githubusercontent.com/insurello/elm-ui-explorer/master/example-image.png)
 
 ### Create an app that lets you browse and interact with UI you've created.
 
-_Why not use one of the several other UI viewing packages like [`alexkorban/uicards`](https://package.elm-lang.org/packages/alexkorban/uicards/latest/), [`kalutheo/elm-ui-explorer`](https://package.elm-lang.org/packages/kalutheo/elm-ui-explorer/latest/), [`miyamoen/bibliopola`](https://package.elm-lang.org/packages/miyamoen/bibliopola/latest/), and [`owanturist/elm-bulletproof`](https://package.elm-lang.org/packages/owanturist/elm-bulletproof/latest/)`?_
+_Why not use one of the several other UI viewing packages like [`alexkorban/uicards`](https://package.elm-lang.org/packages/alexkorban/uicards/latest/), [`kalutheo/elm-ui-explorer`](https://package.elm-lang.org/packages/kalutheo/elm-ui-explorer/latest/), [`miyamoen/bibliopola`](https://package.elm-lang.org/packages/miyamoen/bibliopola/latest/), and [`owanturist/elm-bulletproof`](https://package.elm-lang.org/packages/owanturist/elm-bulletproof/latest/)?_
 
 Most of these packages don't support interacting with UI beyond adding extra buttons to toggle the UIs appearance.
 An exception is `alexkorban/uicards` but it requires that all your UIs have the same msg and model type.
