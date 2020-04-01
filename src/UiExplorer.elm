@@ -693,6 +693,7 @@ viewSidebarLinks (PageBuilder pages) currentPageId =
         |> Element.column
             [ Element.width Element.fill
             , Element.Font.medium
+            , Element.Font.alignLeft
             ]
 
 
