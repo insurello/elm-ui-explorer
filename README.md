@@ -32,6 +32,6 @@ main =
     UiExplorer.application UiExplorer.defaultConfig pages
 ```
 
-For a real world use case there's [also this]().
+For a real world use case [here's](https://insurello.github.io/elm-ui-explorer/) how we use it at Insurello (the code can be found [here](https://github.com/insurello/elm-ui-explorer/tree/master/example)).
 
 [![Insurello](https://gitcdn.xyz/repo/insurello/elm-swedish-bank-account-number/master/insurello.svg)](https://jobb.insurello.se/departments/product-tech)
