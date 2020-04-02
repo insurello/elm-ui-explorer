@@ -275,7 +275,7 @@ viewContent { showLoginPageLink, submitButtonText } state =
                                 , Element.moveRight 14
                                 , Element.centerY
                                 ]
-                                { src = "/assets/bankIdLogo.svg", description = "" }
+                                { src = "/elm-ui-explorer/assets/bankIdLogo.svg", description = "" }
                             )
                         :: DesignSystem.fontColor Gray800TextBlack
                         :: DesignSystem.Input.onEnter (FormMsg Form.Submit)
