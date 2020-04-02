@@ -115,7 +115,7 @@ desktopView windowSize model =
         , Element.el
             [ Element.width Element.fill
             , Element.height <| Element.px 140
-            , Element.Background.image "/assets/backgroundWaveCascadeBlue.svg"
+            , Element.Background.image "/elm-ui-explorer/assets/backgroundWaveCascadeBlue.svg"
             ]
             Element.none
         , Element.el

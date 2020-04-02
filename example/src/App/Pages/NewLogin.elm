@@ -178,7 +178,7 @@ mobileContent windowSize bankId =
                 , Element.width Element.fill
                 , Element.alignBottom
                 ]
-                { src = "/assets/illustrationMonsterBikeAccidentMobile.svg"
+                { src = "/elm-ui-explorer/assets/illustrationMonsterBikeAccidentMobile.svg"
                 , description = ""
                 }
 
@@ -197,7 +197,7 @@ desktopBackground =
                 , Element.width <| Element.px 1440
                 , Element.htmlAttribute <| Html.Attributes.style "pointer-events" "none"
                 ]
-                { src = "/assets/illustrationMonsterBikeAccident.svg", description = "" }
+                { src = "/elm-ui-explorer/assets/illustrationMonsterBikeAccident.svg", description = "" }
         , Element.width <| Element.fill
         , Element.height <| Element.px 300
         , Element.alignBottom

@@ -12,7 +12,7 @@ view showLogin showSignup =
         [ Element.width Element.fill ]
         [ Element.image
             [ DesignSystem.padding P4 ]
-            { src = "/assets/logo.svg", description = "Insurello logo" }
+            { src = "/elm-ui-explorer/assets/logo.svg", description = "Insurello logo" }
         , Element.row
             [ Element.alignRight
             , DesignSystem.spacing S8
@@ -99,7 +99,7 @@ dropdownOverlay toggleDropdown showLogin showSignup =
         , Element.inFront <|
             DesignSystem.Input.button [ Element.alignRight, DesignSystem.padding P8 ]
                 { onPress = toggleDropdown
-                , label = Element.image [] { src = "/assets/xButton.svg", description = "Stäng" }
+                , label = Element.image [] { src = "/elm-ui-explorer/assets/xButton.svg", description = "Stäng" }
                 }
         , Element.Font.size 24
         , DesignSystem.fontColor White
@@ -108,7 +108,7 @@ dropdownOverlay toggleDropdown showLogin showSignup =
             [ DesignSystem.padding P8, Element.spacing 48, Element.width Element.fill, Element.height Element.fill ]
             [ Element.image
                 [ DesignSystem.width L8 ]
-                { src = "/assets/symbol.svg", description = "Insurello logo" }
+                { src = "/elm-ui-explorer/assets/symbol.svg", description = "Insurello logo" }
             , Element.column
                 [ DesignSystem.spacing S8 ]
                 [ Element.link [] { url = "https://www.insurello.se/", label = Element.text "Hem" }
@@ -168,6 +168,6 @@ mobileView toggleDropdown =
                 , Element.centerY
                 , Element.height <| Element.px 32
                 ]
-                { src = "/assets/logo.svg", description = "Insurello logo" }
+                { src = "/elm-ui-explorer/assets/logo.svg", description = "Insurello logo" }
         ]
         (toggleDropdownButton toggleDropdown)

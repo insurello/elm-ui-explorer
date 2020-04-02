@@ -57,11 +57,11 @@ mobileView windowSize copyrightYear =
 
 newsIcons : List { icon : String, description : String, smallHeight : Int }
 newsIcons =
-    [ { icon = "/assets/dagensNyheter.svg", description = "Dagens Nyheter", smallHeight = 12 }
-    , { icon = "/assets/didigtal.svg", description = "DiDigital", smallHeight = 12 }
-    , { icon = "/assets/expressen.svg", description = "Expressen", smallHeight = 12 }
-    , { icon = "/assets/sakOchLiv.svg", description = "Sak&Liv", smallHeight = 30 }
-    , { icon = "/assets/breakit.svg", description = "Breakit", smallHeight = 12 }
+    [ { icon = "/elm-ui-explorer/assets/dagensNyheter.svg", description = "Dagens Nyheter", smallHeight = 12 }
+    , { icon = "/elm-ui-explorer/assets/didigtal.svg", description = "DiDigital", smallHeight = 12 }
+    , { icon = "/elm-ui-explorer/assets/expressen.svg", description = "Expressen", smallHeight = 12 }
+    , { icon = "/elm-ui-explorer/assets/sakOchLiv.svg", description = "Sak&Liv", smallHeight = 30 }
+    , { icon = "/elm-ui-explorer/assets/breakit.svg", description = "Breakit", smallHeight = 12 }
     ]
 
 
@@ -133,13 +133,13 @@ bottomPart copyrightYear =
 logo =
     Element.image
         [ Element.alignTop, Element.moveUp 8 ]
-        { src = "/assets/symbol.svg", description = "Insurello logo" }
+        { src = "/elm-ui-explorer/assets/symbol.svg", description = "Insurello logo" }
 
 
 logoMini =
     Element.image
         [ Element.alignTop, Element.height <| Element.px 43 ]
-        { src = "/assets/symbol.svg", description = "Insurello logo" }
+        { src = "/elm-ui-explorer/assets/symbol.svg", description = "Insurello logo" }
 
 
 horizontalSplitter : Element msg
@@ -265,11 +265,11 @@ toLink =
 
 socialMedia : Int -> Element msg
 socialMedia height =
-    [ ( "/assets/facebook.svg", "https://www.facebook.com/Insurello/", "Facebook" )
-    , ( "/assets/instagram.svg", "https://www.instagram.com/insurello_sverige/", "Instagram" )
-    , ( "/assets/youtube.svg", "https://www.youtube.com/channel/UCVOfYjqU-XbKmMsq3Ic3XaA", "YouTube" )
-    , ( "/assets/linkedin.svg", "https://www.linkedin.com/company/insurello/", "linkedIn" )
-    , ( "/assets/twitterCopy.svg", "https://twitter.com/insurello?lang=en", "Twitter" )
+    [ ( "/elm-ui-explorer/assets/facebook.svg", "https://www.facebook.com/Insurello/", "Facebook" )
+    , ( "/elm-ui-explorer/assets/instagram.svg", "https://www.instagram.com/insurello_sverige/", "Instagram" )
+    , ( "/elm-ui-explorer/assets/youtube.svg", "https://www.youtube.com/channel/UCVOfYjqU-XbKmMsq3Ic3XaA", "YouTube" )
+    , ( "/elm-ui-explorer/assets/linkedin.svg", "https://www.linkedin.com/company/insurello/", "linkedIn" )
+    , ( "/elm-ui-explorer/assets/twitterCopy.svg", "https://twitter.com/insurello?lang=en", "Twitter" )
     ]
         |> List.map
             (\( src, url, description ) ->

@@ -76,24 +76,24 @@ type BackgroundType
 
 youStartSteps : List ( String, String )
 youStartSteps =
-    [ ( "/assets/on_blue_background/bankid", "Logga in via BankID" )
-    , ( "/assets/on_blue_background/claimForm", "Fyll i formuläret" )
-    , ( "/assets/on_blue_background/powerOfAttorney", "Signera fullmakten digitalt" )
-    , ( "/assets/on_blue_background/myPages", "Svara på följdfrågor" )
+    [ ( "/elm-ui-explorer/assets/on_blue_background/bankid", "Logga in via BankID" )
+    , ( "/elm-ui-explorer/assets/on_blue_background/claimForm", "Fyll i formuläret" )
+    , ( "/elm-ui-explorer/assets/on_blue_background/powerOfAttorney", "Signera fullmakten digitalt" )
+    , ( "/elm-ui-explorer/assets/on_blue_background/myPages", "Svara på följdfrågor" )
     ]
 
 
 weFinishSteps : List ( String, String, String )
 weFinishSteps =
-    [ ( "/assets/on_blue_background/caseReview.svg"
+    [ ( "/elm-ui-explorer/assets/on_blue_background/caseReview.svg"
       , "Först till kvarn"
       , "Vi har normalt en handläggningstid på ca 5-6 veckor på grund av stor efterfrågan. När vi sätter igång kommer vi att utvärdera ditt ärende direkt och eventuellt hitta ersättning."
       )
-    , ( "/assets/on_blue_background/waitTime.svg"
+    , ( "/elm-ui-explorer/assets/on_blue_background/waitTime.svg"
       , "Vi sköter dialogen med försäkringsbolaget"
       , "Våra handläggare tar hand om allt pappersarbete och för din talan för att hjälpa dig till rättvis ersättning. Handläggningstiden beror på vilka försäkringar du täcks av och varierar mellan försäkringsbolag, från några veckor till flera månader."
       )
-    , ( "/assets/on_blue_background/paid.svg"
+    , ( "/elm-ui-explorer/assets/on_blue_background/paid.svg"
       , "Pengar på kontot!"
       , "Vi uppdaterar dig kontinuerligt i hanteringen av ärendet och meddelar dig snabbt vid beslut. Om du har rätt till ersättning skickar vi pengarna direkt in på ditt konto."
       )
@@ -129,7 +129,7 @@ theProcessTimeline =
                 [ Element.spacing 28 ]
                 [ Element.image
                     [ Element.moveRight ((iconWidth - downArrowWidth) / 2) ]
-                    { src = "/assets/downArrow.svg", description = "" }
+                    { src = "/elm-ui-explorer/assets/downArrow.svg", description = "" }
                 , Element.el
                     (Element.Font.size 24 :: DesignSystem.font Muli700Bold)
                     weFinishText
@@ -172,7 +172,7 @@ theProcessTimelineMobile =
                 [ Element.image [ Element.centerX ] { src = icon, description = "" }, text ]
 
         arrow =
-            Element.image [ Element.centerX ] { src = "/assets/downArrow.svg", description = "" }
+            Element.image [ Element.centerX ] { src = "/elm-ui-explorer/assets/downArrow.svg", description = "" }
     in
     Element.column
         [ Element.spacing 20
@@ -228,7 +228,7 @@ dottedVerticalLine =
         [ Element.width <| Element.px dottedLineWidth
         , Element.height Element.fill
         , Element.moveRight ((iconWidth - dottedLineWidth) / 2)
-        , Element.Background.tiled "/assets/on_blue_background/dottedLine.svg"
+        , Element.Background.tiled "/elm-ui-explorer/assets/on_blue_background/dottedLine.svg"
         ]
         Element.none
 
@@ -248,7 +248,7 @@ desktopView =
                 ]
                 (Element.image
                     [ Element.centerX, Element.moveDown 130 ]
-                    { src = "/assets/on_blue_background/illustrationWomanApp.svg", description = "" }
+                    { src = "/elm-ui-explorer/assets/on_blue_background/illustrationWomanApp.svg", description = "" }
                 )
             , Element.el
                 [ Element.width Element.fill
@@ -287,7 +287,7 @@ mobileIllustration backgroundType =
         [ Element.inFront <|
             Element.image
                 [ Element.centerX, Element.width <| Element.px 223 ]
-                { src = "/assets/on_white_background/illustrationWomanApp.svg", description = "" }
+                { src = "/elm-ui-explorer/assets/on_white_background/illustrationWomanApp.svg", description = "" }
         , Element.width Element.fill
         , Element.height <| Element.px 224
         ]
@@ -299,7 +299,7 @@ mobileIllustration backgroundType =
             , Element.htmlAttribute <| Html.Attributes.style "pointer-events" "none"
             , Element.padding 0
             ]
-            { src = "/assets/on_blue_background/backgroundWaveCascadeBlue.svg", description = "" }
+            { src = "/elm-ui-explorer/assets/on_blue_background/backgroundWaveCascadeBlue.svg", description = "" }
         , Element.el
             [ Element.height Element.fill
             , Element.width Element.fill

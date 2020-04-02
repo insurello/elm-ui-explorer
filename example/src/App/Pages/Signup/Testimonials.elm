@@ -32,8 +32,8 @@ desktopView getStartedMsg =
 sebastianReview : (Review -> Element msg) -> Element msg
 sebastianReview reviewView =
     reviewView
-        { starIcon = "/assets/starFilled.svg"
-        , personIcon = "/assets/sebastianCustomerAvatar.png"
+        { starIcon = "/elm-ui-explorer/assets/starFilled.svg"
+        , personIcon = "/elm-ui-explorer/assets/sebastianCustomerAvatar.png"
         , text = "Det var oerhört smidigt, jag ansökte och skickade med de intygen som behövdes och resten fixade ni!"
         , name = "Sebastian"
         , injury = "Arbetsskada"
@@ -45,8 +45,8 @@ sebastianReview reviewView =
 rebeckaReview : (Review -> Element msg) -> Element msg
 rebeckaReview reviewView =
     reviewView
-        { starIcon = "/assets/starFilled.svg"
-        , personIcon = "/assets/rebeckaCustomerAvatar.png"
+        { starIcon = "/elm-ui-explorer/assets/starFilled.svg"
+        , personIcon = "/elm-ui-explorer/assets/rebeckaCustomerAvatar.png"
         , text = "Jag läste på om Insurello och fastnade direkt! Dom skötte verkligen allting åt mig"
         , name = "Rebecka"
         , injury = "Handsskada"
