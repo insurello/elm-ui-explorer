@@ -3,3 +3,7 @@ elm-stuff
 # elm-repl generated files
 repl-temp-*
 /.idea
+/node_modules
+/example/node_modules
+/example/build
+.DS_store
