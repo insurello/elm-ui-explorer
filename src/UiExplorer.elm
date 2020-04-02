@@ -243,21 +243,26 @@ type alias SuccessModel pageModel flags =
     }
 
 
-urlParser : Url.Parser.Parser (Maybe String -> b) b
-urlParser =
+urlParser : List String -> Url.Parser.Parser (Maybe String -> b) b
+urlParser path =
+    let
+        pathParser : Url.Parser.Parser a a
+        pathParser =
+            List.foldl (\segment state -> state </> Url.Parser.s segment) Url.Parser.top path
+    in
     Url.Parser.oneOf
-        [ Url.Parser.map Nothing (Url.Parser.s "ui")
-        , Url.Parser.map Just (Url.Parser.s "ui" </> Url.Parser.string)
+        [ Url.Parser.map Nothing pathParser
+        , Url.Parser.map Just (pathParser </> Url.Parser.string)
         ]
 
 
-pageFromUrl : PageBuilder pageModel pageMsg flags -> Browser.Navigation.Key -> Url -> ( String, Cmd (Msg pageMsg) )
-pageFromUrl (PageBuilder pages) key url =
-    case Url.Parser.parse urlParser url of
+pageFromUrl : PageBuilder pageModel pageMsg flags -> List String -> Browser.Navigation.Key -> Url -> ( String, Cmd (Msg pageMsg) )
+pageFromUrl (PageBuilder pages) path key url =
+    case Url.Parser.parse (urlParser path) url of
         Just Nothing ->
             case pages.ids |> List.reverse |> List.head of
                 Just firstPage_ ->
-                    ( "", Browser.Navigation.replaceUrl key (uiUrl firstPage_) )
+                    ( "", Browser.Navigation.replaceUrl key (uiUrl path firstPage_) )
 
                 Nothing ->
                     ( "", Cmd.none )
@@ -274,24 +279,24 @@ pageFromUrl (PageBuilder pages) key url =
             ( "", Cmd.none )
 
 
-uiUrl : String -> String
-uiUrl pageId =
-    Url.Builder.absolute [ "ui", Url.percentEncode pageId ] []
+uiUrl : List String -> String -> String
+uiUrl path pageId =
+    Url.Builder.absolute (path ++ [ Url.percentEncode pageId ]) []
 
 
 init :
-    Decode.Decoder flags
+    ApplicationConfig (Msg pageMsg) flags
     -> PageBuilder pageModel pageMsg flags
     -> Decode.Value
     -> Url
     -> Browser.Navigation.Key
     -> ( Model pageModel flags, Cmd (Msg pageMsg) )
-init flagsDecoder (PageBuilder pages) flagsJson url key =
+init config (PageBuilder pages) flagsJson url key =
     let
         ( page, navigationCmd ) =
-            pageFromUrl (PageBuilder pages) key url
+            pageFromUrl (PageBuilder pages) config.relativeUrlPath key url
     in
-    case Decode.decodeValue flagsDecoder flagsJson of
+    case Decode.decodeValue config.flagsDecoder flagsJson of
         Ok flags ->
             let
                 ( pageModels, pageCmds ) =
@@ -328,13 +333,14 @@ init flagsDecoder (PageBuilder pages) flagsJson url key =
 
 update :
     PageBuilder pageModel pageMsg flags
+    -> ApplicationConfig (Msg pageMsg) flags
     -> Msg pageMsg
     -> Model pageModel flags
     -> ( Model pageModel flags, Cmd (Msg pageMsg) )
-update pages msg model =
+update pages config msg model =
     case model of
         FlagsParsed successModel ->
-            updateSuccess pages msg successModel |> Tuple.mapFirst FlagsParsed
+            updateSuccess pages config msg successModel |> Tuple.mapFirst FlagsParsed
 
         FlagsDidNotParse _ ->
             ( model, Cmd.none )
@@ -342,15 +348,16 @@ update pages msg model =
 
 updateSuccess :
     PageBuilder pageModel pageMsg flags
+    -> ApplicationConfig (Msg pageMsg) flags
     -> Msg pageMsg
     -> SuccessModel pageModel flags
     -> ( SuccessModel pageModel flags, Cmd (Msg pageMsg) )
-updateSuccess (PageBuilder pages) msg model =
+updateSuccess (PageBuilder pages) config msg model =
     case msg of
         UrlChanged url ->
             let
                 ( page, pageCmd ) =
-                    pageFromUrl (PageBuilder pages) model.key url
+                    pageFromUrl (PageBuilder pages) config.relativeUrlPath model.key url
             in
             ( { model | page = page }, pageCmd )
 
@@ -459,7 +466,7 @@ viewSuccess config (PageBuilder pages) model =
                         [ Element.height <| Element.px (Pixels.inPixels model.windowSize.height)
                         , Element.Font.size 16
                         ]
-                        (viewSidebar (PageBuilder pages) model.minimizeSidebar model.page)
+                        (viewSidebar (PageBuilder pages) config model.minimizeSidebar model.page)
                     )
                 :: config.layoutAttributes
             )
@@ -502,8 +509,8 @@ sidebarWidth =
     210
 
 
-viewSidebar : PageBuilder pageModel pageMsg flags -> Bool -> String -> Element (Msg pageMsg)
-viewSidebar pages minimized pageId =
+viewSidebar : PageBuilder pageModel pageMsg flags -> ApplicationConfig (Msg pageMsg) flags -> Bool -> String -> Element (Msg pageMsg)
+viewSidebar pages config minimized pageId =
     if minimized then
         minimizeSidebarButton minimized
 
@@ -522,7 +529,7 @@ viewSidebar pages minimized pageId =
                 [ title, minimizeSidebarButton minimized ]
             , Element.el
                 [ Element.scrollbarY, Element.width Element.fill, Element.height Element.fill ]
-                (viewSidebarLinks pages pageId)
+                (viewSidebarLinks pages config pageId)
             ]
 
 
@@ -657,8 +664,8 @@ listNeighborsHelper list { previous, current, next } newList =
                     newList
 
 
-viewSidebarLinks : PageBuilder pageModel pageMsg flags -> String -> Element (Msg pageMsg)
-viewSidebarLinks (PageBuilder pages) currentPageId =
+viewSidebarLinks : PageBuilder pageModel pageMsg flags -> ApplicationConfig (Msg pageMsg) flags -> String -> Element (Msg pageMsg)
+viewSidebarLinks (PageBuilder pages) config currentPageId =
     pages.ids
         |> List.sort
         |> listNeighbors
@@ -686,7 +693,7 @@ viewSidebarLinks (PageBuilder pages) currentPageId =
                       else
                         Element.mouseOver [ Element.Background.color gray ]
                     ]
-                    { url = uiUrl pageIds.current
+                    { url = uiUrl config.relativeUrlPath pageIds.current
                     , label = Element.paragraph [] [ Element.text pageIds.current ]
                     }
             )
@@ -710,12 +717,14 @@ subscriptions _ =
 
   - `flagsDecoder` lets us parse json flags we pass to our app. This gets passed along to the init function in our pages (or the view function if you're creating a static page).
   - `layoutOptions` and `layoutAttributes` are used in our app's [Element.layoutWith](https://package.elm-lang.org/packages/mdgriffith/elm-ui/latest/Element#layoutWith) to control things like the default font or focusStyle.
+  - `relativeUrlPath` sets the relative path to pages. `relativeUrlPath = []` makes the page link look like this <https://localhost/MyPage>, and `relativeUrlPath = [ ui, here ]` produces <https://localhost/ui/here/MyPage>
 
 -}
 type alias ApplicationConfig msg flags =
     { flagsDecoder : Decode.Decoder flags
     , layoutOptions : List Element.Option
     , layoutAttributes : List (Element.Attribute msg)
+    , relativeUrlPath : List String
     }
 
 
@@ -726,6 +735,7 @@ defaultConfig =
     { flagsDecoder = Decode.succeed ()
     , layoutOptions = []
     , layoutAttributes = []
+    , relativeUrlPath = []
     }
 
 
@@ -759,9 +769,9 @@ application :
     -> Platform.Program Decode.Value (Model pageModel flags) (Msg pageMsg)
 application config pages =
     Browser.application
-        { init = init config.flagsDecoder pages
+        { init = init config pages
         , view = view config pages
-        , update = update pages
+        , update = update pages config
         , subscriptions = subscriptions
         , onUrlRequest = LinkClicked
         , onUrlChange = UrlChanged

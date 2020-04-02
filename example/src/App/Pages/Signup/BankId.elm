@@ -268,7 +268,7 @@ viewContent { showLoginPageLink, submitButtonText } state =
                 [ Element.Input.text
                     (Element.width Element.fill
                         :: Element.height (Element.px 55)
-                        :: Element.paddingEach { left = 72, top = 18, bottom = 0, right = 12 }
+                        :: Element.paddingEach { left = 72, top = 18, bottom = 18, right = 12 }
                         :: Element.inFront
                             (Element.image
                                 [ Element.width <| Element.px 39
