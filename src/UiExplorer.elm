@@ -3,13 +3,16 @@ module UiExplorer exposing
     , firstPage, nextPage, static, Page, PageSize, PageBuilder
     )
 
-{-| Create an app that lets you browse and interact with UI you've created.
+{-|
+
+
+### Create an app that lets you browse and interact with UI you've created.
 
 ![example-image](https://raw.githubusercontent.com/insurello/elm-ui-explorer/master/example-image.png)
-In this example, the panel to the left is called the sidebar and the page selected in it is shown in the remaining space to the right.
+In this image, the panel to the left is called the sidebar and the page selected in it is shown in the remaining space to the right.
 
 Note that this package is built primarily for UI created with [`mdgriffith/elm-ui`](https://package.elm-lang.org/packages/mdgriffith/elm-ui/latest/).
-You can still use `elm/html` with [`Element.html`](https://package.elm-lang.org/packages/mdgriffith/elm-ui/latest/Element#html) though.
+You can still use [`elm/html`](https://package.elm-lang.org/packages/elm/html/latest/) with [`Element.html`](https://package.elm-lang.org/packages/mdgriffith/elm-ui/latest/Element#html) though.
 
 
 # Application
@@ -20,7 +23,7 @@ You can still use `elm/html` with [`Element.html`](https://package.elm-lang.org/
 # Pages
 
 A "page" is something you can select in the sidebar to display when the app is running.
-Pages can contain a single widgets, tables showing every variation of your button components, or an entire login page. It's up to you!
+Pages can contain a single widget, tables showing every variation of your button components, or an entire login page. It's up to you!
 
 @docs firstPage, nextPage, static, Page, PageSize, PageBuilder
 
@@ -53,7 +56,9 @@ import Url.Parser exposing ((</>))
     import UiExplorer
 
     pages =
-        UiExplorer.firstPage "My first page!" (UiExplorer.static (\_ _ -> Element.text "Howdy!"))
+        UiExplorer.firstPage
+            "My first page"
+            (UiExplorer.static (\_ _ -> Element.text "Hi!"))
 
 -}
 firstPage : String -> Page model msg flags -> PageBuilder ( (), model ) (PageMsg () msg) flags
@@ -151,8 +156,12 @@ Each page must also have a unique name.
     import UiExplorer
 
     pages =
-        UiExplorer.firstPage "My first page!" (UiExplorer.static (\_ _ -> Element.text "Howdy!"))
-            |> UiExplorer.nextPage "My second page" (UiExplorer.static (\_ _ -> Element.none))
+        UiExplorer.firstPage
+            "My first page"
+            (UiExplorer.static (\_ _ -> Element.text "Hi!"))
+            |> UiExplorer.nextPage
+                "My second page"
+                (UiExplorer.static (\_ _ -> Element.none))
 
 -}
 nextPage :
@@ -713,7 +722,7 @@ subscriptions _ =
         )
 
 
-{-| Settings we can change when creating our UI explorer application.
+{-| These are settings we can change when creating our UI explorer application.
 
   - `flagsDecoder` lets us parse json flags we pass to our app. This gets passed along to the init function in our pages (or the view function if you're creating a static page).
   - `layoutOptions` and `layoutAttributes` are used in our app's [Element.layoutWith](https://package.elm-lang.org/packages/mdgriffith/elm-ui/latest/Element#layoutWith) to control things like the default font or focusStyle.
@@ -728,7 +737,7 @@ type alias ApplicationConfig msg flags =
     }
 
 
-{-| Default application configuration.
+{-| The default application configuration.
 -}
 defaultConfig : ApplicationConfig msg ()
 defaultConfig =
@@ -745,18 +754,26 @@ defaultConfig =
     import UiExplorer
 
     pages =
-        UiExplorer.firstPage "Button" (UiExplorer.static MyCoolUi.button)
-            |> UiExplorer.nextPage "Footer" (UiExplorer.static MyCoolUi.footer)
+        UiExplorer.firstPage
+            "Button"
+            (UiExplorer.static MyCoolUi.button)
+            |> UiExplorer.nextPage
+                "Footer"
+                (UiExplorer.static MyCoolUi.footer)
             |> UiExplorer.nextPage
                 "Login Form"
                 { init = MyCoolUi.loginInit
                 , update = MyCoolUi.loginUpdate
-                , view = \pageSize model -> MyCoolUi.loginView model
+                , view =
+                    \pageSize model ->
+                        MyCoolUi.loginView model
                 , subscriptions = always Sub.none
                 }
 
     main =
-        UiExplorer.application UiExplorer.defaultConfig pages
+        UiExplorer.application
+            UiExplorer.defaultConfig
+            pages
 
 Note that we didn't add type signatures for `pages` and `main` in the example.
 If we did, we'd have to update it every time we add a new page and the type signatures would get messy.

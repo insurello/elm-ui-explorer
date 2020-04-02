@@ -18,13 +18,18 @@ import MyCoolUi
 import UiExplorer
 
 pages =
-    UiExplorer.firstPage "Button" (UiExplorer.static MyCoolUi.button)
-        |> UiExplorer.nextPage "Footer" (UiExplorer.static MyCoolUi.footer)
+    UiExplorer.firstPage 
+        "Button" 
+        (UiExplorer.static MyCoolUi.button)
+        |> UiExplorer.nextPage 
+            "Footer" 
+            (UiExplorer.static MyCoolUi.footer)
         |> UiExplorer.nextPage
             "Login Form"
             { init = MyCoolUi.loginInit
             , update = MyCoolUi.loginUpdate
-            , view = \pageSize model -> MyCoolUi.loginView model
+            , view = 
+                \pageSize model -> MyCoolUi.loginView model
             , subscriptions = always Sub.none
             }
 
