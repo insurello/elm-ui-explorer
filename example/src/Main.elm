@@ -108,6 +108,6 @@ main =
             DesignSystem.fontSize TextBase
                 :: DesignSystem.fontColor Gray800TextBlack
                 :: DesignSystem.font Roboto400Regular
-        , relativeUrlPath = []
+        , relativeUrlPath = [ "elm-ui-explorer" ]
         }
         pages
