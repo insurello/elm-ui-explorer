@@ -1,7 +1,7 @@
 {
   "main.css": "/elm-ui-explorer/static/css/main.9e9edd32.chunk.css",
-  "main.js": "/elm-ui-explorer/static/js/main.d0a2a6db.chunk.js",
-  "main.js.map": "/elm-ui-explorer/static/js/main.d0a2a6db.chunk.js.map",
+  "main.js": "/elm-ui-explorer/static/js/main.5b693f53.chunk.js",
+  "main.js.map": "/elm-ui-explorer/static/js/main.5b693f53.chunk.js.map",
   "runtime~main.js": "/elm-ui-explorer/static/js/runtime~main.122a3dc7.js",
   "runtime~main.js.map": "/elm-ui-explorer/static/js/runtime~main.122a3dc7.js.map",
   "vendors~main.js": "/elm-ui-explorer/static/js/vendors~main.7aa09ec8.chunk.js",
@@ -42,5 +42,5 @@
   "index.html": "/elm-ui-explorer/index.html",
   "logo.svg": "/elm-ui-explorer/logo.svg",
   "manifest.json": "/elm-ui-explorer/manifest.json",
-  "precache-manifest.70c2c3c148576ceb371fde8b8f147b83.js": "/elm-ui-explorer/precache-manifest.70c2c3c148576ceb371fde8b8f147b83.js"
+  "precache-manifest.99b99ed35353f81c8e87640ead7f136d.js": "/elm-ui-explorer/precache-manifest.99b99ed35353f81c8e87640ead7f136d.js"
 }
