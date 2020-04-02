@@ -1,7 +1,8 @@
 {
   "private": true,
   "scripts": {
-    "start": "elm-app start"
+    "start": "elm-app start",
+    "build": "elm-app build"
   },
   "dependencies": {
     "create-elm-app": "^4.2.4",
