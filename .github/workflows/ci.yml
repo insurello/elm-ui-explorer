@@ -30,5 +30,15 @@ jobs:
         run: |
           test -d node_modules || npm ci
           npm test
+          npm run build
         env:
           CI: true
+
+      - name: Deploy
+        if: github.ref == 'fix-image-link-and-typo'
+        uses: JamesIves/github-pages-deploy-action@releases/v3
+        with:
+          ACCESS_TOKEN: ${{ secrets.ACCESS_TOKEN }}
+          BRANCH: gh-pages # The branch the action should deploy to.
+          FOLDER: example/build # The folder the action should deploy.
+
