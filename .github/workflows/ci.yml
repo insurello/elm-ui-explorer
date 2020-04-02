@@ -35,7 +35,7 @@ jobs:
           CI: true
 
       - name: Deploy
-        if: github.ref == 'refs/heads/fix-image-link-and-typo'
+        if: github.ref == 'refs/heads/master'
         uses: JamesIves/github-pages-deploy-action@releases/v3
         with:
           ACCESS_TOKEN: ${{ secrets.ACCESS_TOKEN }}
