@@ -23,7 +23,8 @@
             "justinmimbs/time-extra": "1.1.0",
             "mdgriffith/elm-ui": "1.1.5",
             "rtfeldman/elm-iso8601-date-strings": "1.1.3",
-            "ryannhg/date-format": "2.3.0"
+            "ryannhg/date-format": "2.3.0",
+            "zwilias/elm-rosetree": "1.5.0"
         },
         "indirect": {
             "elm/random": "1.0.0",

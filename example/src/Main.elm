@@ -87,16 +87,24 @@ footer =
 
 pages =
     UiExplorer.firstPage newSignup newSignupPage
-        |> nextPageWithWidth newSignup newSignupPage 320
-        |> nextPageWithWidth newSignup newSignupPage 1000
-        |> UiExplorer.nextPage newLogin newLoginPage
-        |> nextPageWithWidth newLogin newLoginPage 320
-        |> nextPageWithWidth newLogin newLoginPage 1000
-        |> UiExplorer.nextPage footer (UiExplorer.static footerView)
-        |> nextPageWithWidth footer (UiExplorer.static footerView) 320
-        |> nextPageWithWidth footer (UiExplorer.static footerView) 1000
-        |> UiExplorer.nextPage "BankID" (UiExplorer.static UiExplorer.BankId.view)
-        |> nextPageWithWidth "BankID" (UiExplorer.static UiExplorer.BankId.view) 320
+        |> UiExplorer.groupPages "Signup and login"
+            (nextPageWithWidth newSignup newSignupPage 320
+                >> nextPageWithWidth newSignup newSignupPage 1000
+                >> UiExplorer.groupPages "Login"
+                    (nextPageWithWidth newLogin newLoginPage 320
+                        >> nextPageWithWidth newLogin newLoginPage 1000
+                        >> UiExplorer.nextPage newLogin newLoginPage
+                    )
+            )
+        |> UiExplorer.groupPages "Footer"
+            (UiExplorer.nextPage footer (UiExplorer.static footerView)
+                >> nextPageWithWidth footer (UiExplorer.static footerView) 320
+                >> nextPageWithWidth footer (UiExplorer.static footerView) 1000
+            )
+        |> UiExplorer.groupPages "BankID"
+            (UiExplorer.nextPage "BankID" (UiExplorer.static UiExplorer.BankId.view)
+                >> nextPageWithWidth "BankID" (UiExplorer.static UiExplorer.BankId.view) 320
+            )
         |> UiExplorer.nextPage "DesignSystem.Input" (UiExplorer.static (\_ _ -> DesignSystemInput.view))
 
 
