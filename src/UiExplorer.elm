@@ -47,7 +47,6 @@ import Quantity exposing (Quantity)
 import Set exposing (Set)
 import Task
 import Tree exposing (Tree)
-import Tree.Zipper
 import Url exposing (Url)
 import Url.Builder
 import Url.Parser exposing ((</>))
@@ -241,18 +240,24 @@ nextPage id config (PageBuilder previous) =
             |> UiExplorer.nextPage "About us" MyPage.aboutUs
             |> UiExplorer.nextPage "Fonts" MyPage.fonts
             |> UiExplorer.nextPage "Colors" MyPage.colors
-            |> UiExplorer.nextPage "BasicComponents" MyPage.basicComponents
+            |> UiExplorer.nextPage "Basic components" MyPage.basicComponents
             |> UiExplorer.nextPage "Homepage" MyPage.homepage
 
-    grouped =
+    nowItsGrouped =
         UiExplorer.firstPage "Login" MyPage.login
             |> UiExplorer.nextPage "About us" MyPage.aboutUs
             |> UiExplorer.groupPages "Building blocks"
                 (UiExplorer.nextPage "Fonts" MyPage.fonts
                     >> UiExplorer.nextPage "Colors" MyPage.colors
-                    >> UiExplorer.nextPage "BasicComponents" MyPage.basicComponents
+                    >> UiExplorer.nextPage "Basic components" MyPage.basicComponents
                 )
-            |> UiExplorer.nextPage "page5" MyPage.homepage
+            |> UiExplorer.nextPage "Homepage" MyPage.homepage
+
+Two things to note:
+
+  - Normally pages need unique names but with groups, it's okay to have two pages use the same name so long as they are in different groups.
+  - Due to [`firstPage`](#firstPage) having a different type signature from [`nextPage`](#nextPage), you can't place the first page in a group.
+    If this is a problem, [create an issue on github](https://github.com/insurello/elm-ui-explorer/issues/new) explaining your use case.
 
 -}
 groupPages : String -> (PageBuilder a0 b0 c0 -> PageBuilder a1 b1 c1) -> PageBuilder a0 b0 c0 -> PageBuilder a1 b1 c1
@@ -313,7 +318,7 @@ urlParser (PageBuilder pages) rootPath =
 
 pageFromUrl : PageBuilder pageModel pageMsg flags -> List String -> Browser.Navigation.Key -> Url -> ( List String, Cmd (Msg pageMsg) )
 pageFromUrl (PageBuilder pages) rootPath key url =
-    case Url.Parser.parse (urlParser (PageBuilder pages) rootPath) url |> Debug.log "" of
+    case Url.Parser.parse (urlParser (PageBuilder pages) rootPath) url of
         Just Nothing ->
             case pages.ids |> List.reverse |> List.head of
                 Just { pageId, pageGroup } ->
@@ -361,7 +366,14 @@ init config (PageBuilder pages) flagsJson url key =
                 , minimizeSidebar = False
                 , flags = flags
                 , pageModel = pageModels
-                , expandedGroups = Set.empty
+                , expandedGroups =
+                    page
+                        |> List.reverse
+                        |> List.drop 1
+                        |> List.reverse
+                        |> List.foldr (\segment state -> [] :: state |> List.map (\a -> segment :: a)) []
+                        |> List.map pageGroupToString
+                        |> Set.fromList
                 }
             , Cmd.batch
                 [ navigationCmd
@@ -802,6 +814,7 @@ viewSidebarLinksHelper :
     -> List (Element (Msg pageMsg))
 viewSidebarLinksHelper config model path trees =
     trees
+        |> List.sortBy Tree.label
         |> List.map
             (\tree ->
                 let

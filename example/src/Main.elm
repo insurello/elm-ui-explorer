@@ -101,10 +101,8 @@ pages =
                 >> nextPageWithWidth footer (UiExplorer.static footerView) 320
                 >> nextPageWithWidth footer (UiExplorer.static footerView) 1000
             )
-        |> UiExplorer.groupPages "BankID"
-            (UiExplorer.nextPage "BankID" (UiExplorer.static UiExplorer.BankId.view)
-                >> nextPageWithWidth "BankID" (UiExplorer.static UiExplorer.BankId.view) 320
-            )
+        |> UiExplorer.nextPage "BankID" (UiExplorer.static UiExplorer.BankId.view)
+        |> nextPageWithWidth "BankID" (UiExplorer.static UiExplorer.BankId.view) 320
         |> UiExplorer.nextPage "DesignSystem.Input" (UiExplorer.static (\_ _ -> DesignSystemInput.view))
 
 
