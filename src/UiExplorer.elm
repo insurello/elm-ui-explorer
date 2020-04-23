@@ -79,6 +79,7 @@ firstPage id config =
                     (Element.text "Page not found")
         , subscriptions = \_ -> Sub.none
         , ids = []
+        , pageGroup = []
         }
         |> nextPage id config
 
@@ -128,9 +129,10 @@ type PageBuilder model msg flags
     = PageBuilder
         { init : flags -> ( model, Cmd msg )
         , update : msg -> model -> ( model, Cmd msg )
-        , view : String -> PageSize -> model -> Element msg
+        , view : List String -> PageSize -> model -> Element msg
         , subscriptions : model -> Sub msg
         , ids : List { pageId : String, pageGroup : List String }
+        , pageGroup : List String
         }
 
 
@@ -205,9 +207,9 @@ nextPage id config (PageBuilder previous) =
                     in
                     ( ( previousModel, newModel ), Cmd.map Current cmds )
 
-        view_ : String -> PageSize -> ( modelPrevious, model ) -> Element (PageMsg msgPrevious msg)
+        view_ : List String -> PageSize -> ( modelPrevious, model ) -> Element (PageMsg msgPrevious msg)
         view_ pageId windowSize ( previousModel, model ) =
-            if id == pageId then
+            if previous.pageGroup ++ [ id ] == pageId then
                 config.view windowSize model |> Element.map Current
 
             else
@@ -224,7 +226,8 @@ nextPage id config (PageBuilder previous) =
         , update = update_
         , view = view_
         , subscriptions = subscriptions_
-        , ids = { pageId = id, pageGroup = [] } :: previous.ids
+        , ids = { pageId = id, pageGroup = previous.pageGroup } :: previous.ids
+        , pageGroup = previous.pageGroup
         }
 
 
@@ -256,24 +259,9 @@ groupPages : String -> (PageBuilder a0 b0 c0 -> PageBuilder a1 b1 c1) -> PageBui
 groupPages groupName pages (PageBuilder pageBuilder) =
     let
         (PageBuilder build) =
-            pages (PageBuilder pageBuilder)
-
-        pagesInGroup =
-            List.length build.ids - List.length pageBuilder.ids
+            pages (PageBuilder { pageBuilder | pageGroup = pageBuilder.pageGroup ++ [ groupName ] })
     in
-    { build
-        | ids =
-            build.ids
-                |> List.indexedMap
-                    (\index id ->
-                        if index < pagesInGroup then
-                            { id | pageGroup = groupName :: id.pageGroup }
-
-                        else
-                            id
-                    )
-    }
-        |> PageBuilder
+    { build | pageGroup = pageBuilder.pageGroup |> List.reverse |> List.drop 1 |> List.reverse } |> PageBuilder
 
 
 {-| -}
@@ -284,7 +272,7 @@ type Msg pageMsg
     | UserPressedMinimizeSidebar
     | NoOp
     | PageMsg pageMsg
-    | PressedChangePageHotkey String
+    | PressedChangePageHotkey (List String)
     | ToggledExpandGroup (List String)
 
 
@@ -295,7 +283,7 @@ type Model pageModel flags
 
 
 type alias SuccessModel pageModel flags =
-    { page : String
+    { page : List String
     , key : Browser.Navigation.Key
     , windowSize : PageSize
     , minimizeSidebar : Bool
@@ -305,45 +293,45 @@ type alias SuccessModel pageModel flags =
     }
 
 
-urlParser : List String -> Url.Parser.Parser (Maybe String -> b) b
-urlParser path =
+urlParser : PageBuilder pageModel pageMsg flags -> List String -> Url.Parser.Parser (Maybe (List String) -> b) b
+urlParser (PageBuilder pages) rootPath =
     let
-        pathParser : Url.Parser.Parser a a
-        pathParser =
-            List.foldl (\segment state -> state </> Url.Parser.s segment) Url.Parser.top path
+        pathParser : List String -> Url.Parser.Parser a a
+        pathParser path =
+            List.foldl (\segment state -> state </> Url.Parser.s (Url.percentEncode segment)) Url.Parser.top path
+
+        allPagePaths =
+            pages.ids
+                |> List.map (\{ pageId, pageGroup } -> pageGroup ++ [ pageId ])
+                |> List.map (\path -> Url.Parser.map (Just path) (pathParser (rootPath ++ path)))
     in
     Url.Parser.oneOf
-        [ Url.Parser.map Nothing pathParser
-        , Url.Parser.map Just (pathParser </> Url.Parser.string)
-        ]
+        (Url.Parser.map Nothing (pathParser rootPath)
+            :: allPagePaths
+        )
 
 
-pageFromUrl : PageBuilder pageModel pageMsg flags -> List String -> Browser.Navigation.Key -> Url -> ( String, Cmd (Msg pageMsg) )
-pageFromUrl (PageBuilder pages) path key url =
-    case Url.Parser.parse (urlParser path) url of
+pageFromUrl : PageBuilder pageModel pageMsg flags -> List String -> Browser.Navigation.Key -> Url -> ( List String, Cmd (Msg pageMsg) )
+pageFromUrl (PageBuilder pages) rootPath key url =
+    case Url.Parser.parse (urlParser (PageBuilder pages) rootPath) url |> Debug.log "" of
         Just Nothing ->
             case pages.ids |> List.reverse |> List.head of
-                Just { pageId } ->
-                    ( "", Browser.Navigation.replaceUrl key (uiUrl path pageId) )
+                Just { pageId, pageGroup } ->
+                    ( [], Browser.Navigation.replaceUrl key (uiUrl rootPath (pageGroup ++ [ pageId ])) )
 
                 Nothing ->
-                    ( "", Cmd.none )
+                    ( [], Cmd.none )
 
         Just (Just page) ->
-            case Url.percentDecode page of
-                Just decodedPage ->
-                    ( decodedPage, Cmd.none )
-
-                Nothing ->
-                    ( "", Cmd.none )
+            ( page, Cmd.none )
 
         Nothing ->
-            ( "", Cmd.none )
+            ( [], Cmd.none )
 
 
-uiUrl : List String -> String -> String
+uiUrl : List String -> List String -> String
 uiUrl path pageId =
-    Url.Builder.absolute (path ++ [ Url.percentEncode pageId ]) []
+    Url.Builder.absolute (path ++ List.map Url.percentEncode pageId) []
 
 
 init :
@@ -455,8 +443,8 @@ updateSuccess (PageBuilder pages) config msg model =
         PressedChangePageHotkey pageId ->
             ( model
             , Cmd.batch
-                [ Browser.Navigation.pushUrl model.key pageId
-                , Browser.Dom.focus pageId |> Task.attempt (always NoOp)
+                [ Browser.Navigation.pushUrl model.key (pageGroupToString pageId)
+                , Browser.Dom.focus (pageGroupToString pageId) |> Task.attempt (always NoOp)
                 ]
             )
 
@@ -808,7 +796,7 @@ buildTree items =
 
 viewSidebarLinksHelper :
     { a | relativeUrlPath : List String }
-    -> { b | page : String, expandedGroups : Set String }
+    -> { b | page : List String, expandedGroups : Set String }
     -> List String
     -> List (Tree String)
     -> List (Element (Msg pageMsg))
@@ -820,19 +808,19 @@ viewSidebarLinksHelper config model path trees =
                     label : String
                     label =
                         Tree.label tree
+
+                    newPath =
+                        path ++ [ label ]
                 in
                 case Tree.children tree of
                     [] ->
                         pageButton
                             config
                             model.page
-                            { previous = Nothing, next = Nothing, current = label }
+                            { previous = Nothing, next = Nothing, current = newPath }
 
                     children ->
                         let
-                            newPath =
-                                path ++ [ label ]
-
                             groupButton isExpanded =
                                 Element.Input.button
                                     [ Element.width Element.fill
@@ -902,8 +890,8 @@ gatherWith testFn list =
 
 pageButton :
     { a | relativeUrlPath : List String }
-    -> String
-    -> { b | previous : Maybe String, next : Maybe String, current : String }
+    -> List String
+    -> { b | previous : Maybe (List String), next : Maybe (List String), current : List String }
     -> Element (Msg pageMsg)
 pageButton config selectedPage pageIds =
     Element.link
@@ -921,7 +909,7 @@ pageButton config selectedPage pageIds =
                     _ ->
                         NoOp
             )
-        , Element.htmlAttribute <| Html.Attributes.id pageIds.current
+        , Element.htmlAttribute <| Html.Attributes.id <| pageGroupToString pageIds.current
         , if pageIds.current == selectedPage then
             Element.Background.color lightBlue
 
@@ -929,7 +917,14 @@ pageButton config selectedPage pageIds =
             Element.mouseOver [ Element.Background.color gray ]
         ]
         { url = uiUrl config.relativeUrlPath pageIds.current
-        , label = Element.paragraph [] [ Element.text pageIds.current ]
+        , label =
+            pageIds.current
+                |> List.reverse
+                |> List.head
+                |> Maybe.withDefault ""
+                |> Element.text
+                |> List.singleton
+                |> Element.paragraph []
         }
 
 
@@ -940,10 +935,6 @@ viewSidebarLinks :
     -> Element (Msg pageMsg)
 viewSidebarLinks (PageBuilder pages) config model =
     pages.ids
-        --|> List.filter (.pageGroup >> isGroupExpanded model)
-        --|> List.sortBy (\{ pageId, pageGroup } -> pageGroupToString pageGroup |> (\a -> a ++ pageId))
-        --|> listNeighbors
-        --|> List.map (pageButton config model.page)
         |> buildTree
         |> viewSidebarLinksHelper config model []
         |> Element.column
