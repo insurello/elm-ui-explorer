@@ -1,6 +1,6 @@
 module UiExplorer exposing
     ( application, defaultConfig, ApplicationConfig, Model, Msg, PageMsg
-    , firstPage, nextPage, static, Page, PageSize, PageBuilder
+    , firstPage, nextPage, groupPages, static, Page, PageSize, PageBuilder
     )
 
 {-|
@@ -25,7 +25,7 @@ You can still use [`elm/html`](https://package.elm-lang.org/packages/elm/html/la
 A "page" is something you can select in the sidebar to display when the app is running.
 Pages can contain a single widget, tables showing every variation of your button components, or an entire login page. It's up to you!
 
-@docs firstPage, nextPage, static, Page, PageSize, PageBuilder
+@docs firstPage, nextPage, groupPages, static, Page, PageSize, PageBuilder
 
 -}
 
@@ -44,7 +44,9 @@ import Html.Events
 import Json.Decode as Decode
 import Pixels exposing (Pixels)
 import Quantity exposing (Quantity)
+import Set exposing (Set)
 import Task
+import Tree exposing (Tree)
 import Url exposing (Url)
 import Url.Builder
 import Url.Parser exposing ((</>))
@@ -76,6 +78,7 @@ firstPage id config =
                     (Element.text "Page not found")
         , subscriptions = \_ -> Sub.none
         , ids = []
+        , pageGroup = []
         }
         |> nextPage id config
 
@@ -125,9 +128,10 @@ type PageBuilder model msg flags
     = PageBuilder
         { init : flags -> ( model, Cmd msg )
         , update : msg -> model -> ( model, Cmd msg )
-        , view : String -> PageSize -> model -> Element msg
+        , view : List String -> PageSize -> model -> Element msg
         , subscriptions : model -> Sub msg
-        , ids : List String
+        , ids : List { pageId : String, pageGroup : List String }
+        , pageGroup : List String
         }
 
 
@@ -202,9 +206,9 @@ nextPage id config (PageBuilder previous) =
                     in
                     ( ( previousModel, newModel ), Cmd.map Current cmds )
 
-        view_ : String -> PageSize -> ( modelPrevious, model ) -> Element (PageMsg msgPrevious msg)
+        view_ : List String -> PageSize -> ( modelPrevious, model ) -> Element (PageMsg msgPrevious msg)
         view_ pageId windowSize ( previousModel, model ) =
-            if id == pageId then
+            if previous.pageGroup ++ [ id ] == pageId then
                 config.view windowSize model |> Element.map Current
 
             else
@@ -221,8 +225,48 @@ nextPage id config (PageBuilder previous) =
         , update = update_
         , view = view_
         , subscriptions = subscriptions_
-        , ids = id :: previous.ids
+        , ids = { pageId = id, pageGroup = previous.pageGroup } :: previous.ids
+        , pageGroup = previous.pageGroup
         }
+
+
+{-| If your list of pages on the sidebar is starting to get too long, you can group some of them together with `groupPages`.
+
+    import MyPages
+    import UiExplorer
+
+    flatPages =
+        UiExplorer.firstPage "Login" MyPage.login
+            |> UiExplorer.nextPage "About us" MyPage.aboutUs
+            |> UiExplorer.nextPage "Fonts" MyPage.fonts
+            |> UiExplorer.nextPage "Colors" MyPage.colors
+            |> UiExplorer.nextPage "Basic components" MyPage.basicComponents
+            |> UiExplorer.nextPage "Homepage" MyPage.homepage
+
+    nowItsGrouped =
+        UiExplorer.firstPage "Login" MyPage.login
+            |> UiExplorer.nextPage "About us" MyPage.aboutUs
+            |> UiExplorer.groupPages "Building blocks"
+                (UiExplorer.nextPage "Fonts" MyPage.fonts
+                    >> UiExplorer.nextPage "Colors" MyPage.colors
+                    >> UiExplorer.nextPage "Basic components" MyPage.basicComponents
+                )
+            |> UiExplorer.nextPage "Homepage" MyPage.homepage
+
+Two things to note:
+
+  - Normally pages need unique names, but with groups it's okay to have two pages use the same name so long as they are in different groups.
+  - Due to [`firstPage`](#firstPage) having a different type signature from [`nextPage`](#nextPage), you can't place the first page in a group.
+    If this is a problem, [create an issue on github](https://github.com/insurello/elm-ui-explorer/issues/new) explaining your use case.
+
+-}
+groupPages : String -> (PageBuilder a0 b0 c0 -> PageBuilder a1 b1 c1) -> PageBuilder a0 b0 c0 -> PageBuilder a1 b1 c1
+groupPages groupName pages (PageBuilder pageBuilder) =
+    let
+        (PageBuilder build) =
+            pages (PageBuilder { pageBuilder | pageGroup = pageBuilder.pageGroup ++ [ groupName ] })
+    in
+    { build | pageGroup = pageBuilder.pageGroup |> List.reverse |> List.drop 1 |> List.reverse } |> PageBuilder
 
 
 {-| -}
@@ -233,7 +277,8 @@ type Msg pageMsg
     | UserPressedMinimizeSidebar
     | NoOp
     | PageMsg pageMsg
-    | PressedChangePageHotkey String
+    | PressedChangePageHotkey (List String)
+    | ToggledExpandGroup (List String)
 
 
 {-| -}
@@ -243,54 +288,55 @@ type Model pageModel flags
 
 
 type alias SuccessModel pageModel flags =
-    { page : String
+    { page : List String
     , key : Browser.Navigation.Key
     , windowSize : PageSize
     , minimizeSidebar : Bool
     , pageModel : pageModel
     , flags : flags
+    , expandedGroups : Set String
     }
 
 
-urlParser : List String -> Url.Parser.Parser (Maybe String -> b) b
-urlParser path =
+urlParser : PageBuilder pageModel pageMsg flags -> List String -> Url.Parser.Parser (Maybe (List String) -> b) b
+urlParser (PageBuilder pages) rootPath =
     let
-        pathParser : Url.Parser.Parser a a
-        pathParser =
-            List.foldl (\segment state -> state </> Url.Parser.s segment) Url.Parser.top path
+        pathParser : List String -> Url.Parser.Parser a a
+        pathParser path =
+            List.foldl (\segment state -> state </> Url.Parser.s (Url.percentEncode segment)) Url.Parser.top path
+
+        allPagePaths =
+            pages.ids
+                |> List.map (\{ pageId, pageGroup } -> pageGroup ++ [ pageId ])
+                |> List.map (\path -> Url.Parser.map (Just path) (pathParser (rootPath ++ path)))
     in
     Url.Parser.oneOf
-        [ Url.Parser.map Nothing pathParser
-        , Url.Parser.map Just (pathParser </> Url.Parser.string)
-        ]
+        (Url.Parser.map Nothing (pathParser rootPath)
+            :: allPagePaths
+        )
 
 
-pageFromUrl : PageBuilder pageModel pageMsg flags -> List String -> Browser.Navigation.Key -> Url -> ( String, Cmd (Msg pageMsg) )
-pageFromUrl (PageBuilder pages) path key url =
-    case Url.Parser.parse (urlParser path) url of
+pageFromUrl : PageBuilder pageModel pageMsg flags -> List String -> Browser.Navigation.Key -> Url -> ( List String, Cmd (Msg pageMsg) )
+pageFromUrl (PageBuilder pages) rootPath key url =
+    case Url.Parser.parse (urlParser (PageBuilder pages) rootPath) url of
         Just Nothing ->
             case pages.ids |> List.reverse |> List.head of
-                Just firstPage_ ->
-                    ( "", Browser.Navigation.replaceUrl key (uiUrl path firstPage_) )
+                Just { pageId, pageGroup } ->
+                    ( [], Browser.Navigation.replaceUrl key (uiUrl rootPath (pageGroup ++ [ pageId ])) )
 
                 Nothing ->
-                    ( "", Cmd.none )
+                    ( [], Cmd.none )
 
         Just (Just page) ->
-            case Url.percentDecode page of
-                Just decodedPage ->
-                    ( decodedPage, Cmd.none )
-
-                Nothing ->
-                    ( "", Cmd.none )
+            ( page, Cmd.none )
 
         Nothing ->
-            ( "", Cmd.none )
+            ( [], Cmd.none )
 
 
-uiUrl : List String -> String -> String
+uiUrl : List String -> List String -> String
 uiUrl path pageId =
-    Url.Builder.absolute (path ++ [ Url.percentEncode pageId ]) []
+    Url.Builder.absolute (path ++ List.map Url.percentEncode pageId) []
 
 
 init :
@@ -320,6 +366,14 @@ init config (PageBuilder pages) flagsJson url key =
                 , minimizeSidebar = False
                 , flags = flags
                 , pageModel = pageModels
+                , expandedGroups =
+                    page
+                        |> List.reverse
+                        |> List.drop 1
+                        |> List.reverse
+                        |> List.foldr (\segment state -> [] :: state |> List.map (\a -> segment :: a)) []
+                        |> List.map pageGroupToString
+                        |> Set.fromList
                 }
             , Cmd.batch
                 [ navigationCmd
@@ -401,9 +455,25 @@ updateSuccess (PageBuilder pages) config msg model =
         PressedChangePageHotkey pageId ->
             ( model
             , Cmd.batch
-                [ Browser.Navigation.pushUrl model.key pageId
-                , Browser.Dom.focus pageId |> Task.attempt (always NoOp)
+                [ Browser.Navigation.pushUrl model.key (pageGroupToString pageId)
+                , Browser.Dom.focus (pageGroupToString pageId) |> Task.attempt (always NoOp)
                 ]
+            )
+
+        ToggledExpandGroup path ->
+            ( { model
+                | expandedGroups =
+                    let
+                        pathString =
+                            pageGroupToString path
+                    in
+                    if Set.member pathString model.expandedGroups then
+                        Set.remove pathString model.expandedGroups
+
+                    else
+                        Set.insert pathString model.expandedGroups
+              }
+            , Cmd.none
             )
 
 
@@ -475,7 +545,7 @@ viewSuccess config (PageBuilder pages) model =
                         [ Element.height <| Element.px (Pixels.inPixels model.windowSize.height)
                         , Element.Font.size 16
                         ]
-                        (viewSidebar (PageBuilder pages) config model.minimizeSidebar model.page)
+                        (viewSidebar (PageBuilder pages) config model)
                     )
                 :: config.layoutAttributes
             )
@@ -518,10 +588,10 @@ sidebarWidth =
     210
 
 
-viewSidebar : PageBuilder pageModel pageMsg flags -> ApplicationConfig (Msg pageMsg) flags -> Bool -> String -> Element (Msg pageMsg)
-viewSidebar pages config minimized pageId =
-    if minimized then
-        minimizeSidebarButton minimized
+viewSidebar : PageBuilder pageModel pageMsg flags -> ApplicationConfig (Msg pageMsg) flags -> SuccessModel pageModel flags -> Element (Msg pageMsg)
+viewSidebar pages config model =
+    if model.minimizeSidebar then
+        minimizeSidebarButton model.minimizeSidebar
 
     else
         Element.column
@@ -535,10 +605,10 @@ viewSidebar pages config minimized pageId =
             ]
             [ Element.row
                 [ Element.width Element.fill ]
-                [ title, minimizeSidebarButton minimized ]
+                [ title, minimizeSidebarButton model.minimizeSidebar ]
             , Element.el
                 [ Element.scrollbarY, Element.width Element.fill, Element.height Element.fill ]
-                (viewSidebarLinks pages config pageId)
+                (viewSidebarLinks pages config model)
             ]
 
 
@@ -611,6 +681,25 @@ gray =
     Element.rgb255 206 215 225
 
 
+black =
+    Element.rgb 0 0 0
+
+
+mix : Float -> Element.Color -> Element.Color -> Element.Color
+mix mixRatio color0 color1 =
+    let
+        a =
+            Element.toRgb color0
+
+        b =
+            Element.toRgb color1
+
+        mix_ getter =
+            getter a * mixRatio + getter b * (1 - mixRatio)
+    in
+    Element.rgb (mix_ .red) (mix_ .green) (mix_ .blue)
+
+
 type ArrowKey
     = ArrowUp
     | ArrowDown
@@ -673,39 +762,230 @@ listNeighborsHelper list { previous, current, next } newList =
                     newList
 
 
-viewSidebarLinks : PageBuilder pageModel pageMsg flags -> ApplicationConfig (Msg pageMsg) flags -> String -> Element (Msg pageMsg)
-viewSidebarLinks (PageBuilder pages) config currentPageId =
-    pages.ids
-        |> List.sort
-        |> listNeighbors
+pageGroupToString : List String -> String
+pageGroupToString =
+    uiUrl []
+
+
+isGroupExpanded : { a | expandedGroups : Set String } -> List String -> Bool
+isGroupExpanded model pageGroup =
+    Set.member (pageGroupToString pageGroup) model.expandedGroups
+
+
+type Either
+    = TempLeaf String
+    | Group { pageId : String, pageGroupHead : String, pageGroup : List String }
+
+
+buildTree : List { pageId : String, pageGroup : List String } -> List (Tree String)
+buildTree items =
+    let
+        helper : List { pageId : String, pageGroup : List String } -> List (Tree String)
+        helper items_ =
+            items_
+                |> List.map
+                    (\item ->
+                        case item.pageGroup of
+                            head :: rest ->
+                                Group { pageId = item.pageId, pageGroupHead = head, pageGroup = rest }
+
+                            [] ->
+                                TempLeaf item.pageId
+                    )
+                |> gatherWith
+                    (\a b ->
+                        case ( a, b ) of
+                            ( Group groupA, Group groupB ) ->
+                                groupA.pageGroupHead == groupB.pageGroupHead
+
+                            _ ->
+                                False
+                    )
+                |> List.map
+                    (\( head, rest ) ->
+                        case head of
+                            TempLeaf leaf ->
+                                Tree.singleton leaf
+
+                            Group { pageGroupHead } ->
+                                (head :: rest)
+                                    |> List.filterMap
+                                        (\a ->
+                                            case a of
+                                                Group { pageId, pageGroup } ->
+                                                    Just { pageId = pageId, pageGroup = pageGroup }
+
+                                                TempLeaf _ ->
+                                                    Nothing
+                                        )
+                                    |> helper
+                                    |> Tree.tree pageGroupHead
+                    )
+    in
+    helper items
+
+
+mouseOverButtonColor buttonDepth =
+    mix (0.92 ^ toFloat buttonDepth) gray black
+
+
+pageSelectedButtonColor buttonDepth =
+    mix (0.92 ^ toFloat buttonDepth) lightBlue black
+
+
+viewSidebarLinksHelper :
+    { a | relativeUrlPath : List String }
+    -> { b | page : List String, expandedGroups : Set String }
+    -> List String
+    -> List (Tree String)
+    -> List (Element (Msg pageMsg))
+viewSidebarLinksHelper config model path trees =
+    trees
+        |> List.sortBy Tree.label
         |> List.map
-            (\pageIds ->
-                Element.link
-                    [ Element.paddingEach { left = 16, right = 8, top = 8, bottom = 8 }
-                    , Element.width Element.fill
-                    , onKey
-                        (\arrowKey ->
-                            case ( arrowKey, pageIds.previous, pageIds.next ) of
-                                ( ArrowUp, Just previous, _ ) ->
-                                    PressedChangePageHotkey previous
+            (\tree ->
+                let
+                    label : String
+                    label =
+                        Tree.label tree
 
-                                ( ArrowDown, _, Just next ) ->
-                                    PressedChangePageHotkey next
+                    newPath =
+                        path ++ [ label ]
+                in
+                case Tree.children tree of
+                    [] ->
+                        pageButton
+                            config
+                            model.page
+                            { previous = Nothing, next = Nothing, current = newPath }
 
-                                _ ->
-                                    NoOp
-                        )
-                    , Element.htmlAttribute <| Html.Attributes.id pageIds.current
-                    , if pageIds.current == currentPageId then
-                        Element.Background.color lightBlue
+                    children ->
+                        let
+                            groupButton isExpanded =
+                                Element.Input.button
+                                    [ Element.width Element.fill
+                                    , Element.paddingEach { left = 6, right = 8, top = 8, bottom = 8 }
+                                    , Element.mouseOver [ Element.Background.color (mouseOverButtonColor (List.length newPath)) ]
+                                    , Element.focused []
+                                    , if isExpanded then
+                                        Element.Background.color <| Element.rgba 0 0 0 0
 
-                      else
-                        Element.mouseOver [ Element.Background.color gray ]
-                    ]
-                    { url = uiUrl config.relativeUrlPath pageIds.current
-                    , label = Element.paragraph [] [ Element.text pageIds.current ]
-                    }
+                                      else
+                                        Element.Background.color <| Element.rgba 0 0 0 0.08
+                                    ]
+                                    { onPress = ToggledExpandGroup newPath |> Just
+                                    , label =
+                                        let
+                                            arrow =
+                                                (if isExpanded then
+                                                    "▾"
+
+                                                 else
+                                                    "▸"
+                                                )
+                                                    |> Element.text
+                                                    |> Element.el
+                                                        [ Element.width <| Element.px 10
+                                                        , Element.Font.size 12
+                                                        , Element.moveUp 1
+                                                        , Element.moveLeft 1
+                                                        ]
+                                        in
+                                        Element.row [] [ arrow, Element.text label ]
+                                    }
+                        in
+                        if isGroupExpanded model newPath then
+                            Element.column
+                                [ Element.width Element.fill, Element.Background.color <| Element.rgba 0 0 0 0.08 ]
+                                (groupButton True :: viewSidebarLinksHelper config model newPath children)
+
+                        else
+                            groupButton False
             )
+
+
+{-| Group equal elements together using a custom equality function. Elements will be
+grouped in the same order as they appear in the original list. The same applies to
+elements within each group.
+gatherWith (==) [1,2,1,3,2]
+--> [(1,[1]),(2,[2]),(3,[])]
+
+This code is from <https://github.com/elm-community/list-extra/blob/f3c3c61b7ef85c1b497641f06aae37772674a82e/src/List/Extra.elm#L1943>
+It's copied here to avoid a dependency on List.Extra just for a single function.
+
+-}
+gatherWith : (a -> a -> Bool) -> List a -> List ( a, List a )
+gatherWith testFn list =
+    let
+        helper : List a -> List ( a, List a ) -> List ( a, List a )
+        helper scattered gathered =
+            case scattered of
+                [] ->
+                    List.reverse gathered
+
+                toGather :: population ->
+                    let
+                        ( gathering, remaining ) =
+                            List.partition (testFn toGather) population
+                    in
+                    helper remaining <| ( toGather, gathering ) :: gathered
+    in
+    helper list []
+
+
+pageButton :
+    { a | relativeUrlPath : List String }
+    -> List String
+    -> { b | previous : Maybe (List String), next : Maybe (List String), current : List String }
+    -> Element (Msg pageMsg)
+pageButton config selectedPage pageIds =
+    let
+        depth =
+            List.length pageIds.current - 1
+    in
+    Element.link
+        [ Element.paddingEach { left = 16, right = 8, top = 8, bottom = 8 }
+        , Element.width Element.fill
+        , onKey
+            (\arrowKey ->
+                case ( arrowKey, pageIds.previous, pageIds.next ) of
+                    ( ArrowUp, Just previous, _ ) ->
+                        PressedChangePageHotkey previous
+
+                    ( ArrowDown, _, Just next ) ->
+                        PressedChangePageHotkey next
+
+                    _ ->
+                        NoOp
+            )
+        , Element.htmlAttribute <| Html.Attributes.id <| pageGroupToString pageIds.current
+        , if pageIds.current == selectedPage then
+            Element.Background.color (pageSelectedButtonColor depth)
+
+          else
+            Element.mouseOver [ mouseOverButtonColor depth |> Element.Background.color ]
+        ]
+        { url = uiUrl config.relativeUrlPath pageIds.current
+        , label =
+            pageIds.current
+                |> List.reverse
+                |> List.head
+                |> Maybe.withDefault ""
+                |> Element.text
+                |> List.singleton
+                |> Element.paragraph []
+        }
+
+
+viewSidebarLinks :
+    PageBuilder pageModel pageMsg flags
+    -> ApplicationConfig (Msg pageMsg) flags
+    -> SuccessModel pageModel flags
+    -> Element (Msg pageMsg)
+viewSidebarLinks (PageBuilder pages) config model =
+    pages.ids
+        |> buildTree
+        |> viewSidebarLinksHelper config model []
         |> Element.column
             [ Element.width Element.fill
             , Element.Font.medium
