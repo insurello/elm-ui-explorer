@@ -826,11 +826,11 @@ buildTree items =
 
 
 mouseOverButtonColor buttonDepth =
-    mix (0.9 ^ toFloat buttonDepth) gray black
+    mix (0.92 ^ toFloat buttonDepth) gray black
 
 
 pageSelectedButtonColor buttonDepth =
-    mix (0.9 ^ toFloat buttonDepth) lightBlue black
+    mix (0.92 ^ toFloat buttonDepth) lightBlue black
 
 
 viewSidebarLinksHelper :
@@ -871,7 +871,7 @@ viewSidebarLinksHelper config model path trees =
                                         Element.Background.color <| Element.rgba 0 0 0 0
 
                                       else
-                                        Element.Background.color <| Element.rgba 0 0 0 0.1
+                                        Element.Background.color <| Element.rgba 0 0 0 0.08
                                     ]
                                     { onPress = ToggledExpandGroup newPath |> Just
                                     , label =
@@ -896,7 +896,7 @@ viewSidebarLinksHelper config model path trees =
                         in
                         if isGroupExpanded model newPath then
                             Element.column
-                                [ Element.width Element.fill, Element.Background.color <| Element.rgba 0 0 0 0.1 ]
+                                [ Element.width Element.fill, Element.Background.color <| Element.rgba 0 0 0 0.08 ]
                                 (groupButton True :: viewSidebarLinksHelper config model newPath children)
 
                         else
