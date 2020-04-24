@@ -681,6 +681,25 @@ gray =
     Element.rgb255 206 215 225
 
 
+black =
+    Element.rgb 0 0 0
+
+
+mix : Float -> Element.Color -> Element.Color -> Element.Color
+mix mixRatio color0 color1 =
+    let
+        a =
+            Element.toRgb color0
+
+        b =
+            Element.toRgb color1
+
+        mix_ getter =
+            getter a * mixRatio + getter b * (1 - mixRatio)
+    in
+    Element.rgb (mix_ .red) (mix_ .green) (mix_ .blue)
+
+
 type ArrowKey
     = ArrowUp
     | ArrowDown
@@ -806,6 +825,14 @@ buildTree items =
     helper items
 
 
+mouseOverButtonColor buttonDepth =
+    mix (0.9 ^ toFloat buttonDepth) gray black
+
+
+pageSelectedButtonColor buttonDepth =
+    mix (0.9 ^ toFloat buttonDepth) lightBlue black
+
+
 viewSidebarLinksHelper :
     { a | relativeUrlPath : List String }
     -> { b | page : List String, expandedGroups : Set String }
@@ -838,8 +865,13 @@ viewSidebarLinksHelper config model path trees =
                                 Element.Input.button
                                     [ Element.width Element.fill
                                     , Element.paddingEach { left = 6, right = 8, top = 8, bottom = 8 }
-                                    , Element.mouseOver [ Element.Background.color gray ]
+                                    , Element.mouseOver [ Element.Background.color (mouseOverButtonColor (List.length newPath)) ]
                                     , Element.focused []
+                                    , if isExpanded then
+                                        Element.Background.color <| Element.rgba 0 0 0 0
+
+                                      else
+                                        Element.Background.color <| Element.rgba 0 0 0 0.1
                                     ]
                                     { onPress = ToggledExpandGroup newPath |> Just
                                     , label =
@@ -864,7 +896,7 @@ viewSidebarLinksHelper config model path trees =
                         in
                         if isGroupExpanded model newPath then
                             Element.column
-                                [ Element.width Element.fill ]
+                                [ Element.width Element.fill, Element.Background.color <| Element.rgba 0 0 0 0.1 ]
                                 (groupButton True :: viewSidebarLinksHelper config model newPath children)
 
                         else
@@ -907,6 +939,10 @@ pageButton :
     -> { b | previous : Maybe (List String), next : Maybe (List String), current : List String }
     -> Element (Msg pageMsg)
 pageButton config selectedPage pageIds =
+    let
+        depth =
+            List.length pageIds.current - 1
+    in
     Element.link
         [ Element.paddingEach { left = 16, right = 8, top = 8, bottom = 8 }
         , Element.width Element.fill
@@ -924,10 +960,10 @@ pageButton config selectedPage pageIds =
             )
         , Element.htmlAttribute <| Html.Attributes.id <| pageGroupToString pageIds.current
         , if pageIds.current == selectedPage then
-            Element.Background.color lightBlue
+            Element.Background.color (pageSelectedButtonColor depth)
 
           else
-            Element.mouseOver [ Element.Background.color gray ]
+            Element.mouseOver [ mouseOverButtonColor depth |> Element.Background.color ]
         ]
         { url = uiUrl config.relativeUrlPath pageIds.current
         , label =
