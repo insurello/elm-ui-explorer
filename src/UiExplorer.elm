@@ -255,7 +255,7 @@ nextPage id config (PageBuilder previous) =
 
 Two things to note:
 
-  - Normally pages need unique names but with groups, it's okay to have two pages use the same name so long as they are in different groups.
+  - Normally pages need unique names, but with groups it's okay to have two pages use the same name so long as they are in different groups.
   - Due to [`firstPage`](#firstPage) having a different type signature from [`nextPage`](#nextPage), you can't place the first page in a group.
     If this is a problem, [create an issue on github](https://github.com/insurello/elm-ui-explorer/issues/new) explaining your use case.
 
