@@ -745,7 +745,7 @@ listNeighborsHelper list { previous, current, next } newList =
 
 pageGroupToString : List String -> String
 pageGroupToString =
-    List.intersperse "/" >> String.concat
+    uiUrl []
 
 
 isGroupExpanded : { a | expandedGroups : Set String } -> List String -> Bool
