@@ -993,13 +993,21 @@ viewSidebarLinks (PageBuilder pages) config model =
             ]
 
 
-subscriptions : Model pageModel flags -> Sub (Msg pageMsg)
-subscriptions _ =
-    Browser.Events.onResize
-        (\width height ->
-            WindowResized
-                { width = Pixels.pixels width, height = Pixels.pixels height }
-        )
+subscriptions : PageBuilder pageModel pageMsg flags -> Model pageModel flags -> Sub (Msg pageMsg)
+subscriptions (PageBuilder pages) model =
+    Sub.batch
+        [ Browser.Events.onResize
+            (\width height ->
+                WindowResized
+                    { width = Pixels.pixels width, height = Pixels.pixels height }
+            )
+        , case model of
+            FlagsParsed successModel ->
+                pages.subscriptions successModel.pageModel |> Sub.map PageMsg
+
+            FlagsDidNotParse _ ->
+                Sub.none
+        ]
 
 
 {-| These are settings we can change when creating our UI explorer application.
@@ -1069,7 +1077,7 @@ application config pages =
         { init = init config pages
         , view = view config pages
         , update = update pages config
-        , subscriptions = subscriptions
+        , subscriptions = subscriptions pages
         , onUrlRequest = LinkClicked
         , onUrlChange = UrlChanged
         }
