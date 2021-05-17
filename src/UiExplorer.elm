@@ -35,8 +35,10 @@ import Browser.Events
 import Browser.Navigation
 import Element exposing (Element)
 import Element.Background
+import Element.Border
 import Element.Font
 import Element.Input
+import Element.Lazy
 import Element.Region
 import Html exposing (Html)
 import Html.Attributes
@@ -45,6 +47,8 @@ import Json.Decode as Decode
 import Pixels exposing (Pixels)
 import Quantity exposing (Quantity)
 import Set exposing (Set)
+import Svg
+import Svg.Attributes
 import Task
 import Tree exposing (Tree)
 import Url exposing (Url)
@@ -209,7 +213,7 @@ nextPage id config (PageBuilder previous) =
         view_ : List String -> PageSize -> ( modelPrevious, model ) -> Element (PageMsg msgPrevious msg)
         view_ pageId windowSize ( previousModel, model ) =
             if previous.pageGroup ++ [ id ] == pageId then
-                config.view windowSize model |> Element.map Current
+                Element.Lazy.lazy2 config.view windowSize model |> Element.map Current
 
             else
                 previous.view pageId windowSize previousModel |> Element.map Previous
@@ -266,7 +270,7 @@ groupPages groupName pages (PageBuilder pageBuilder) =
         (PageBuilder build) =
             pages (PageBuilder { pageBuilder | pageGroup = pageBuilder.pageGroup ++ [ groupName ] })
     in
-    { build | pageGroup = pageBuilder.pageGroup |> List.reverse |> List.drop 1 |> List.reverse } |> PageBuilder
+    { build | pageGroup = build.pageGroup |> List.reverse |> List.drop 1 |> List.reverse } |> PageBuilder
 
 
 {-| -}
@@ -274,11 +278,73 @@ type Msg pageMsg
     = UrlChanged Url
     | LinkClicked Browser.UrlRequest
     | WindowResized PageSize
-    | UserPressedMinimizeSidebar
+    | PressedToggleSidebar
     | NoOp
     | PageMsg pageMsg
     | PressedChangePageHotkey (List String)
-    | ToggledExpandGroup (List String)
+    | ToggledPageGroup (List String)
+    | TypingSearchText String
+    | PressedClearSearchText
+    | PressedPageSizeOption PageSizeOption
+    | ToggledPageSizeGroup
+    | PressedColorBlindOption (Maybe ColorBlindOption)
+    | ToggledColorBlindGroup
+
+
+type PageSizeOption
+    = Iphone5
+    | Iphone6
+    | IpadVertical
+    | IpadHorizontal
+    | Native
+
+
+allPageSizeOptions : List PageSizeOption
+allPageSizeOptions =
+    [ Iphone5
+    , Iphone6
+    , IpadVertical
+    , IpadHorizontal
+    , Native
+    ]
+
+
+pageSizeOptionToString : PageSizeOption -> String
+pageSizeOptionToString pageSizeOption =
+    case pageSizeOption of
+        Iphone5 ->
+            "iPhone 5/SE"
+
+        Iphone6 ->
+            "iPhone 6/7/8"
+
+        IpadVertical ->
+            "iPad (vertical)"
+
+        IpadHorizontal ->
+            "iPad (horizontal)"
+
+        Native ->
+            "Native width"
+
+
+pageSizeOptionWidth : PageSizeOption -> Maybe (Quantity Int Pixels)
+pageSizeOptionWidth pageSizeOption =
+    case pageSizeOption of
+        Iphone5 ->
+            Just (Pixels.pixels 320)
+
+        Iphone6 ->
+            Just (Pixels.pixels 375)
+
+        IpadVertical ->
+            Just (Pixels.pixels 768)
+
+        IpadHorizontal ->
+            Just (Pixels.pixels 1024)
+
+        Native ->
+            Nothing
 
 
 {-| -}
@@ -295,6 +361,11 @@ type alias SuccessModel pageModel flags =
     , pageModel : pageModel
     , flags : flags
     , expandedGroups : Set String
+    , searchText : String
+    , expandPageSizeOptions : Bool
+    , pageSizeOption : PageSizeOption
+    , expandColorBlindOptions : Bool
+    , colorBlindOption : Maybe ColorBlindOption
     }
 
 
@@ -311,7 +382,8 @@ urlParser (PageBuilder pages) rootPath =
                 |> List.map (\path -> Url.Parser.map (Just path) (pathParser (rootPath ++ path)))
     in
     Url.Parser.oneOf
-        (Url.Parser.map Nothing (pathParser rootPath)
+        (Url.Parser.map Nothing Url.Parser.top
+            :: Url.Parser.map Nothing (pathParser rootPath)
             :: allPagePaths
         )
 
@@ -366,14 +438,12 @@ init config (PageBuilder pages) flagsJson url key =
                 , minimizeSidebar = False
                 , flags = flags
                 , pageModel = pageModels
-                , expandedGroups =
-                    page
-                        |> List.reverse
-                        |> List.drop 1
-                        |> List.reverse
-                        |> List.foldr (\segment state -> [] :: state |> List.map (\a -> segment :: a)) []
-                        |> List.map pageGroupToString
-                        |> Set.fromList
+                , expandedGroups = expandPage page Set.empty
+                , searchText = ""
+                , expandPageSizeOptions = False
+                , pageSizeOption = Native
+                , expandColorBlindOptions = False
+                , colorBlindOption = Nothing
                 }
             , Cmd.batch
                 [ navigationCmd
@@ -392,6 +462,18 @@ init config (PageBuilder pages) flagsJson url key =
 
         Err error ->
             ( FlagsDidNotParse { errorMessage = Decode.errorToString error }, Cmd.none )
+
+
+expandPage : List String -> Set String -> Set String
+expandPage page expandedGroups =
+    page
+        |> List.reverse
+        |> List.drop 1
+        |> List.reverse
+        |> List.foldr (\segment state -> [] :: state |> List.map (\a -> segment :: a)) []
+        |> List.map pageGroupToString
+        |> Set.fromList
+        |> Set.union expandedGroups
 
 
 update :
@@ -442,7 +524,7 @@ updateSuccess (PageBuilder pages) config msg model =
         WindowResized size ->
             ( { model | windowSize = size }, Cmd.none )
 
-        UserPressedMinimizeSidebar ->
+        PressedToggleSidebar ->
             ( { model | minimizeSidebar = not model.minimizeSidebar }, Cmd.none )
 
         PageMsg pageMsg ->
@@ -455,12 +537,12 @@ updateSuccess (PageBuilder pages) config msg model =
         PressedChangePageHotkey pageId ->
             ( model
             , Cmd.batch
-                [ Browser.Navigation.pushUrl model.key (pageGroupToString pageId)
+                [ Browser.Navigation.pushUrl model.key (uiUrl config.relativeUrlPath pageId)
                 , Browser.Dom.focus (pageGroupToString pageId) |> Task.attempt (always NoOp)
                 ]
             )
 
-        ToggledExpandGroup path ->
+        ToggledPageGroup path ->
             ( { model
                 | expandedGroups =
                     let
@@ -475,6 +557,39 @@ updateSuccess (PageBuilder pages) config msg model =
               }
             , Cmd.none
             )
+
+        TypingSearchText text ->
+            ( { model
+                | searchText = text
+                , expandedGroups =
+                    if showSearchResults model.searchText then
+                        model.expandedGroups
+
+                    else
+                        expandPage model.page model.expandedGroups
+              }
+            , Cmd.none
+            )
+
+        PressedClearSearchText ->
+            ( { model
+                | searchText = ""
+                , expandedGroups = expandPage model.page model.expandedGroups
+              }
+            , Cmd.none
+            )
+
+        PressedPageSizeOption pageSizeOption ->
+            ( { model | pageSizeOption = pageSizeOption }, Cmd.none )
+
+        ToggledPageSizeGroup ->
+            ( { model | expandPageSizeOptions = not model.expandPageSizeOptions }, Cmd.none )
+
+        PressedColorBlindOption colorBlindOption ->
+            ( { model | colorBlindOption = colorBlindOption }, Cmd.none )
+
+        ToggledColorBlindGroup ->
+            ( { model | expandColorBlindOptions = not model.expandColorBlindOptions }, Cmd.none )
 
 
 view :
@@ -534,68 +649,106 @@ viewSuccess :
     -> PageBuilder pageModel pageMsg flags
     -> SuccessModel pageModel flags
     -> Browser.Document (Msg pageMsg)
-viewSuccess config (PageBuilder pages) model =
+viewSuccess config ((PageBuilder pages) as pages_) model =
+    let
+        actualSidebarWidth =
+            if model.minimizeSidebar then
+                sidebarMinimizedWidth
+
+            else
+                sidebarWidth
+    in
     { title = "UI Explorer"
     , body =
         [ Element.layoutWith { options = config.layoutOptions }
             (Element.width Element.fill
-                :: Element.height Element.fill
                 :: Element.inFront
                     (Element.el
                         [ Element.height <| Element.px (Pixels.inPixels model.windowSize.height)
                         , Element.Font.size 16
                         ]
-                        (viewSidebar (PageBuilder pages) config model)
+                        (viewSidebar pages_ config model)
                     )
+                :: Element.behindContent (Element.html colorblindnessSvg)
+                :: Element.behindContent (Element.html colorblindnessCss)
                 :: config.layoutAttributes
             )
             (Element.row
                 [ Element.width Element.fill
                 , Element.height Element.fill
-
-                -- Parts of the page (things using inFront, above, onLeft, etc) will appear in front of the sidebar if we don't set a negative index
-                , Element.htmlAttribute <| Html.Attributes.style "z-index" "-100"
                 ]
-                [ Element.el
-                    [ if isMobile model.windowSize || model.minimizeSidebar then
-                        Element.width (Element.px 0)
-
-                      else
-                        Element.width (Element.px sidebarWidth)
-                    ]
-                    Element.none
+                [ Element.el [ Element.width (Element.px (Pixels.inPixels actualSidebarWidth)) ] Element.none
                 , Element.el
-                    [ Element.alignTop
-                    , Element.width Element.fill
-                    , Element.height Element.fill
-                    ]
+                    (Element.alignTop
+                        :: Element.width
+                            (case pageSizeOptionWidth model.pageSizeOption of
+                                Just width ->
+                                    Element.px (Pixels.inPixels width)
+
+                                Nothing ->
+                                    Element.fillPortion 999999999
+                            )
+                        :: Element.height Element.fill
+                        :: Element.Region.mainContent
+                        :: (case model.colorBlindOption of
+                                Nothing ->
+                                    []
+
+                                Just colorBlindOption ->
+                                    colorBlindOptionToCssClass colorBlindOption
+                                        |> Html.Attributes.class
+                                        |> Element.htmlAttribute
+                                        |> List.singleton
+                           )
+                    )
                     (pages.view model.page (contentSize model) model.pageModel
                         |> Element.map PageMsg
                     )
+                , Element.el
+                    [ Element.Background.color gray
+                    , Element.alpha 0.5
+                    , Element.width Element.fill
+                    , Element.height Element.fill
+                    ]
+                    Element.none
                 ]
             )
         ]
     }
 
 
-isMobile : PageSize -> Bool
-isMobile =
-    .width >> Quantity.lessThan (Pixels.pixels 700)
-
-
-sidebarWidth : number
+sidebarWidth : Quantity number Pixels
 sidebarWidth =
-    210
+    Pixels.pixels 210
 
 
-viewSidebar : PageBuilder pageModel pageMsg flags -> ApplicationConfig (Msg pageMsg) flags -> SuccessModel pageModel flags -> Element (Msg pageMsg)
+sidebarMinimizedWidth : Quantity number Pixels
+sidebarMinimizedWidth =
+    Pixels.pixels 16
+
+
+viewSidebar :
+    PageBuilder pageModel pageMsg flags
+    -> ApplicationConfig (Msg pageMsg) flags
+    -> SuccessModel pageModel flags
+    -> Element (Msg pageMsg)
 viewSidebar pages config model =
     if model.minimizeSidebar then
-        minimizeSidebarButton model.minimizeSidebar
+        Element.el
+            [ Element.height Element.fill ]
+            (Element.Input.button
+                [ Element.width (Element.px (Pixels.inPixels sidebarMinimizedWidth))
+                , Element.Background.color lightGray
+                , Element.height Element.fill
+                ]
+                { onPress = Just PressedToggleSidebar
+                , label = Element.el [ Element.moveRight 3 ] (Element.text "❯")
+                }
+            )
 
     else
         Element.column
-            [ Element.width (Element.px sidebarWidth)
+            [ Element.width (Element.px (Pixels.inPixels sidebarWidth))
             , Element.height Element.fill
 
             -- For some reason a horizontal scrollbar pops up unless we include this.
@@ -605,65 +758,409 @@ viewSidebar pages config model =
             ]
             [ Element.row
                 [ Element.width Element.fill ]
-                [ title, minimizeSidebarButton model.minimizeSidebar ]
+                [ config.sidebarTitle, minimizeSidebarButton ]
+            , Element.column
+                [ Element.spacing 2, Element.width Element.fill ]
+                [ pageSizeOptionView model.expandPageSizeOptions model.pageSizeOption
+                , colorBlindOptionView model.expandColorBlindOptions model.colorBlindOption
+                ]
+            , Element.el [ Element.padding 4, Element.width Element.fill ]
+                (Element.Input.text
+                    [ Element.width Element.fill
+                    , Element.paddingEach { left = 8, right = 32, top = 8, bottom = 8 }
+                    , Element.inFront <|
+                        if String.isEmpty model.searchText then
+                            Element.none
+
+                        else
+                            Element.Input.button
+                                [ Element.alignRight
+                                , Element.centerY
+                                , Element.moveLeft 2
+                                , Element.width <| Element.px 26
+                                , Element.height <| Element.px 26
+                                , Element.Background.color lightGray
+                                , Element.Font.center
+                                , Element.Border.rounded 99999
+                                ]
+                                { onPress = Just PressedClearSearchText, label = Element.text "✕" }
+                    ]
+                    { onChange = TypingSearchText
+                    , text = model.searchText
+                    , placeholder = Just (Element.Input.placeholder [] (Element.text "Search pages"))
+                    , label = Element.Input.labelHidden "Search pages"
+                    }
+                )
             , Element.el
-                [ Element.scrollbarY, Element.width Element.fill, Element.height Element.fill ]
-                (viewSidebarLinks pages config model)
+                [ Element.scrollbarY
+                , Element.width Element.fill
+                , Element.height Element.fill
+                , Element.Region.navigation
+                ]
+                (if showSearchResults model.searchText then
+                    Element.Lazy.lazy4 viewSearchResults pages config model.page model.searchText
+
+                 else
+                    Element.Lazy.lazy4 viewSidebarLinks pages config model.page model.expandedGroups
+                )
             ]
 
 
-title : Element msg
-title =
-    Element.el
-        [ Element.Font.size 20, Element.padding 16 ]
-        (Element.text "UI Explorer")
+colorblindnessCss : Html msg
+colorblindnessCss =
+    Html.node "style"
+        []
+        [ List.map
+            (\option ->
+                let
+                    className =
+                        colorBlindOptionToCssClass option
+                in
+                "." ++ className ++ " { filter: url(#" ++ className ++ ") }\n"
+            )
+            allColorBlindOptions
+            |> String.concat
+            |> Html.text
+        ]
+
+
+type ColorBlindOption
+    = Protanopia
+    | Protanomaly
+    | Deuteranopia
+    | Deuteranomaly
+    | Tritanopia
+    | Tritanomaly
+    | Achromatopsia
+    | Achromatomaly
+    | Blind
+
+
+allColorBlindOptions : List ColorBlindOption
+allColorBlindOptions =
+    [ Protanopia
+    , Protanomaly
+    , Deuteranopia
+    , Deuteranomaly
+    , Tritanopia
+    , Tritanomaly
+    , Achromatopsia
+    , Achromatomaly
+    , Blind
+    ]
+
+
+colorBlindOptionToString : ColorBlindOption -> String
+colorBlindOptionToString colorBlindOption =
+    case colorBlindOption of
+        Protanopia ->
+            "Protanopia"
+
+        Protanomaly ->
+            "Protanomaly"
+
+        Deuteranopia ->
+            "Deuteranopia"
+
+        Deuteranomaly ->
+            "Deuteranomaly"
+
+        Tritanopia ->
+            "Tritanopia"
+
+        Tritanomaly ->
+            "Tritanomaly"
+
+        Achromatopsia ->
+            "Achromatopsia"
+
+        Achromatomaly ->
+            "Achromatomaly"
+
+        Blind ->
+            "Blind"
+
+
+colorBlindOptionToCssClass : ColorBlindOption -> String
+colorBlindOptionToCssClass colorBlindOption =
+    case colorBlindOption of
+        Protanopia ->
+            "uie-a"
+
+        Protanomaly ->
+            "uie-b"
+
+        Deuteranopia ->
+            "uie-c"
+
+        Deuteranomaly ->
+            "uie-d"
+
+        Tritanopia ->
+            "uie-e"
+
+        Tritanomaly ->
+            "uie-f"
+
+        Achromatopsia ->
+            "uie-g"
+
+        Achromatomaly ->
+            "uie-h"
+
+        Blind ->
+            "uie-i"
+
+
+{-| Values were taken from the page source here: <http://www.rgblind.se/url>.
+Search in the DOM for "protanopia" and you should find an SVG tag containing this data.
+-}
+colorblindnessSvg : Html msg
+colorblindnessSvg =
+    Svg.svg []
+        [ Svg.defs []
+            [ Svg.filter
+                [ Svg.Attributes.id (colorBlindOptionToCssClass Protanopia) ]
+                [ Svg.feColorMatrix
+                    [ Svg.Attributes.in_ "SourceGraphic"
+                    , Svg.Attributes.values "0.567, 0.433, 0, 0, 0 0.558, 0.442, 0, 0, 0 0, 0.242, 0.758, 0, 0 0, 0, 0, 1, 0"
+                    ]
+                    []
+                ]
+            , Svg.filter
+                [ Svg.Attributes.id (colorBlindOptionToCssClass Protanomaly) ]
+                [ Svg.feColorMatrix
+                    [ Svg.Attributes.in_ "SourceGraphic"
+                    , Svg.Attributes.values "0.817, 0.183, 0, 0, 0 0.333, 0.667, 0, 0, 0 0, 0.125, 0.875, 0, 0 0, 0, 0, 1, 0"
+                    ]
+                    []
+                ]
+            , Svg.filter
+                [ Svg.Attributes.id (colorBlindOptionToCssClass Deuteranopia) ]
+                [ Svg.feColorMatrix
+                    [ Svg.Attributes.in_ "SourceGraphic"
+                    , Svg.Attributes.values "0.625, 0.375, 0, 0, 0 0.7, 0.3, 0, 0, 0 0, 0.3, 0.7, 0, 0 0, 0, 0, 1, 0"
+                    ]
+                    []
+                ]
+            , Svg.filter
+                [ Svg.Attributes.id (colorBlindOptionToCssClass Deuteranomaly) ]
+                [ Svg.feColorMatrix
+                    [ Svg.Attributes.in_ "SourceGraphic"
+                    , Svg.Attributes.values "0.8, 0.2, 0, 0, 0 0.258, 0.742, 0, 0, 0 0, 0.142, 0.858, 0, 0 0, 0, 0, 1, 0"
+                    ]
+                    []
+                ]
+            , Svg.filter
+                [ Svg.Attributes.id (colorBlindOptionToCssClass Tritanopia) ]
+                [ Svg.feColorMatrix
+                    [ Svg.Attributes.in_ "SourceGraphic"
+                    , Svg.Attributes.values "0.95, 0.05,  0, 0, 0 0,  0.433, 0.567, 0, 0 0,  0.475, 0.525, 0, 0 0,  0, 0, 1, 0"
+                    ]
+                    []
+                ]
+            , Svg.filter
+                [ Svg.Attributes.id (colorBlindOptionToCssClass Tritanomaly) ]
+                [ Svg.feColorMatrix
+                    [ Svg.Attributes.in_ "SourceGraphic"
+                    , Svg.Attributes.values "0.967, 0.033, 0, 0, 0 0, 0.733, 0.267, 0, 0 0, 0.183, 0.817, 0, 0 0, 0, 0, 1, 0"
+                    ]
+                    []
+                ]
+            , Svg.filter
+                [ Svg.Attributes.id (colorBlindOptionToCssClass Achromatopsia) ]
+                [ Svg.feColorMatrix
+                    [ Svg.Attributes.in_ "SourceGraphic"
+                    , Svg.Attributes.values "0.299, 0.587, 0.114, 0, 0 0.299, 0.587, 0.114, 0, 0 0.299, 0.587, 0.114, 0, 0 0, 0, 0, 1, 0"
+                    ]
+                    []
+                ]
+            , Svg.filter
+                [ Svg.Attributes.id (colorBlindOptionToCssClass Achromatomaly) ]
+                [ Svg.feColorMatrix
+                    [ Svg.Attributes.in_ "SourceGraphic"
+                    , Svg.Attributes.values "0.618, 0.320, 0.062, 0, 0 0.163, 0.775, 0.062, 0, 0 0.163, 0.320, 0.516, 0, 0 0, 0, 0, 1, 0"
+                    ]
+                    []
+                ]
+            , Svg.filter
+                [ Svg.Attributes.id (colorBlindOptionToCssClass Blind) ]
+                [ Svg.feColorMatrix
+                    [ Svg.Attributes.in_ "SourceGraphic"
+                    , Svg.Attributes.values "0, 0, 0, 0, 0 0, 0, 0, 0, 0 0, 0, 0, 0, 0 0, 0, 0, 0, 0"
+                    ]
+                    []
+                ]
+            ]
+        ]
+
+
+pageSizeOptionView : Bool -> PageSizeOption -> Element (Msg pageMsg)
+pageSizeOptionView isExpanded selectedPageSize =
+    optionGroupView
+        isExpanded
+        selectedPageSize
+        allPageSizeOptions
+        pageSizeOptionToString
+        PressedPageSizeOption
+        ToggledPageSizeGroup
+
+
+colorBlindOptionView : Bool -> Maybe ColorBlindOption -> Element (Msg pageMsg)
+colorBlindOptionView isExpanded selectedColorBlindOption =
+    optionGroupView
+        isExpanded
+        selectedColorBlindOption
+        (Nothing :: List.map Just allColorBlindOptions)
+        (Maybe.map colorBlindOptionToString >> Maybe.withDefault "No color blindness")
+        PressedColorBlindOption
+        ToggledColorBlindGroup
+
+
+optionGroupView : Bool -> a -> List a -> (a -> String) -> (a -> msg) -> msg -> Element msg
+optionGroupView isExpanded selectedItem items itemToString onPress toggleExpand =
+    Element.Input.button
+        [ Element.width Element.fill
+        , Element.paddingEach { left = 6, right = 8, top = 5, bottom = 5 }
+        , Element.mouseOver [ Element.Background.color lightBlue ]
+        , focusAttributes
+        ]
+        { onPress = Just toggleExpand
+        , label = Element.row [] [ expanderArrow isExpanded, Element.text (itemToString selectedItem) ]
+        }
+        :: List.map
+            (\option ->
+                Element.el
+                    [ Element.width Element.fill ]
+                    (Element.Input.button
+                        [ Element.width Element.fill
+                        , Element.paddingEach { left = 6, right = 8, top = 6, bottom = 6 }
+                        , Element.Background.color <|
+                            if selectedItem == option then
+                                lightBlue
+
+                            else
+                                Element.rgba 0 0 0 0
+                        , Element.mouseOver [ Element.Background.color lightBlue ]
+                        , Element.focused [ Element.Background.color lightBlue ]
+                        ]
+                        { onPress = onPress option |> Just
+                        , label = itemToString option |> Element.text
+                        }
+                    )
+            )
+            (if isExpanded then
+                items
+
+             else
+                []
+            )
+        |> Element.column
+            [ Element.width Element.fill
+            , Element.Background.color <| Element.rgba 0 0 0 0.08
+            , Element.Font.size 15
+            ]
+
+
+showSearchResults : String -> Bool
+showSearchResults searchText =
+    String.length searchText > 1
+
+
+viewSearchResults :
+    PageBuilder pageModel pageMsg flags
+    -> ApplicationConfig (Msg pageMsg) flags
+    -> List String
+    -> String
+    -> Element (Msg pageMsg)
+viewSearchResults (PageBuilder pages) config currentPage searchText =
+    pages.ids
+        |> List.filterMap
+            (\{ pageId, pageGroup } ->
+                if
+                    String.join " " pageGroup
+                        ++ " "
+                        ++ pageId
+                        |> String.toLower
+                        |> String.contains (String.toLower searchText)
+                then
+                    pageGroup ++ [ pageId ] |> Just
+
+                else
+                    Nothing
+            )
+        |> List.sort
+        |> listNeighbors
+        |> List.map (pageButton config currentPage)
+        |> Element.column [ Element.width Element.fill ]
+
+
+listNeighbors : List a -> List { previous : Maybe a, current : a, next : Maybe a }
+listNeighbors list =
+    listNeighborsHelper list { previous = Nothing, current = Nothing, next = Nothing } [] |> List.reverse
+
+
+listNeighborsHelper :
+    List a
+    -> { previous : Maybe a, current : Maybe a, next : Maybe a }
+    -> List { previous : Maybe a, current : a, next : Maybe a }
+    -> List { previous : Maybe a, current : a, next : Maybe a }
+listNeighborsHelper list { current, next } newList =
+    case list of
+        head :: rest ->
+            let
+                newState =
+                    { previous = current
+                    , current = next
+                    , next = Just head
+                    }
+            in
+            case next of
+                Just next_ ->
+                    listNeighborsHelper rest newState ({ previous = current, current = next_, next = Just head } :: newList)
+
+                _ ->
+                    listNeighborsHelper rest newState newList
+
+        [] ->
+            case next of
+                Just next_ ->
+                    { previous = current, current = next_, next = Nothing } :: newList
+
+                Nothing ->
+                    newList
 
 
 contentSize : SuccessModel pageModel flags -> PageSize
 contentSize model =
-    if isMobile model.windowSize then
-        model.windowSize
-
-    else if model.minimizeSidebar then
-        { width = model.windowSize.width
+    if model.minimizeSidebar then
+        { width =
+            pageSizeOptionWidth model.pageSizeOption
+                |> Maybe.withDefault model.windowSize.width
+                |> Quantity.minus sidebarMinimizedWidth
         , height = model.windowSize.height
         }
 
     else
-        { width = model.windowSize.width |> Quantity.minus (Pixels.pixels sidebarWidth)
+        { width =
+            pageSizeOptionWidth model.pageSizeOption
+                |> Maybe.withDefault model.windowSize.width
+                |> Quantity.minus sidebarWidth
         , height = model.windowSize.height
         }
 
 
-minimizeSidebarButton : Bool -> Element (Msg pageMsg)
-minimizeSidebarButton minimized =
-    Element.row
-        [ Element.alignRight ]
-        [ -- We include the title here (but hide it) so that the button has the correct height.
-          Element.el [ Element.width <| Element.px 0, Element.transparent True ] title
-        , Element.Input.button
-            [ Element.paddingXY 20 0
-            , Element.height Element.fill
-            , Element.Font.size 20
-            , Element.alpha 0.5
-            , Element.Background.color lightGray
-            , Element.mouseOver
-                [ Element.alpha 1
-                , Element.Background.color gray
-                ]
-            , Element.focused []
-            ]
-            { onPress = Just UserPressedMinimizeSidebar
-            , label =
-                Element.text
-                    (if minimized then
-                        "❯"
-
-                     else
-                        "❮"
-                    )
-            }
+minimizeSidebarButton : Element (Msg pageMsg)
+minimizeSidebarButton =
+    Element.Input.button
+        [ Element.alignRight
+        , Element.paddingXY 20 0
+        , Element.height Element.fill
+        , Element.Font.size 20
         ]
+        { onPress = Just PressedToggleSidebar
+        , label = Element.text "❮"
+        }
 
 
 lightBlue : Element.Color
@@ -726,50 +1223,14 @@ onKey msg =
         )
 
 
-listNeighbors : List a -> List { previous : Maybe a, current : a, next : Maybe a }
-listNeighbors list =
-    listNeighborsHelper list { previous = Nothing, current = Nothing, next = Nothing } [] |> List.reverse
-
-
-listNeighborsHelper :
-    List a
-    -> { previous : Maybe a, current : Maybe a, next : Maybe a }
-    -> List { previous : Maybe a, current : a, next : Maybe a }
-    -> List { previous : Maybe a, current : a, next : Maybe a }
-listNeighborsHelper list { previous, current, next } newList =
-    case list of
-        head :: rest ->
-            let
-                newState =
-                    { previous = current
-                    , current = next
-                    , next = Just head
-                    }
-            in
-            case next of
-                Just next_ ->
-                    listNeighborsHelper rest newState ({ previous = current, current = next_, next = Just head } :: newList)
-
-                _ ->
-                    listNeighborsHelper rest newState newList
-
-        [] ->
-            case next of
-                Just next_ ->
-                    { previous = current, current = next_, next = Nothing } :: newList
-
-                Nothing ->
-                    newList
-
-
 pageGroupToString : List String -> String
 pageGroupToString =
     uiUrl []
 
 
-isGroupExpanded : { a | expandedGroups : Set String } -> List String -> Bool
-isGroupExpanded model pageGroup =
-    Set.member (pageGroupToString pageGroup) model.expandedGroups
+isGroupExpanded : Set String -> List String -> Bool
+isGroupExpanded expandedGroups pageGroup =
+    Set.member (pageGroupToString pageGroup) expandedGroups
 
 
 type Either
@@ -835,11 +1296,12 @@ pageSelectedButtonColor buttonDepth =
 
 viewSidebarLinksHelper :
     { a | relativeUrlPath : List String }
-    -> { b | page : List String, expandedGroups : Set String }
+    -> List String
+    -> Set String
     -> List String
     -> List (Tree String)
     -> List (Element (Msg pageMsg))
-viewSidebarLinksHelper config model path trees =
+viewSidebarLinksHelper config page expandedGroups path trees =
     trees
         |> List.sortBy Tree.label
         |> List.map
@@ -856,52 +1318,57 @@ viewSidebarLinksHelper config model path trees =
                     [] ->
                         pageButton
                             config
-                            model.page
+                            page
                             { previous = Nothing, next = Nothing, current = newPath }
 
                     children ->
                         let
+                            groupButton : Bool -> Element (Msg pageMsg)
                             groupButton isExpanded =
                                 Element.Input.button
                                     [ Element.width Element.fill
                                     , Element.paddingEach { left = 6, right = 8, top = 8, bottom = 8 }
                                     , Element.mouseOver [ Element.Background.color (mouseOverButtonColor (List.length newPath)) ]
-                                    , Element.focused []
                                     , if isExpanded then
                                         Element.Background.color <| Element.rgba 0 0 0 0
 
                                       else
                                         Element.Background.color <| Element.rgba 0 0 0 0.08
+                                    , focusAttributes
                                     ]
-                                    { onPress = ToggledExpandGroup newPath |> Just
-                                    , label =
-                                        let
-                                            arrow =
-                                                (if isExpanded then
-                                                    "▾"
-
-                                                 else
-                                                    "▸"
-                                                )
-                                                    |> Element.text
-                                                    |> Element.el
-                                                        [ Element.width <| Element.px 10
-                                                        , Element.Font.size 12
-                                                        , Element.moveUp 1
-                                                        , Element.moveLeft 1
-                                                        ]
-                                        in
-                                        Element.row [] [ arrow, Element.text label ]
+                                    { onPress = ToggledPageGroup newPath |> Just
+                                    , label = Element.row [] [ expanderArrow isExpanded, Element.text label ]
                                     }
                         in
-                        if isGroupExpanded model newPath then
-                            Element.column
+                        Element.el
+                            [ Element.width Element.fill, Element.paddingEach { left = 0, right = 0, top = 0, bottom = 2 } ]
+                            (Element.column
                                 [ Element.width Element.fill, Element.Background.color <| Element.rgba 0 0 0 0.08 ]
-                                (groupButton True :: viewSidebarLinksHelper config model newPath children)
+                                (if isGroupExpanded expandedGroups newPath then
+                                    groupButton True :: viewSidebarLinksHelper config page expandedGroups newPath children
 
-                        else
-                            groupButton False
+                                 else
+                                    [ groupButton False ]
+                                )
+                            )
             )
+
+
+expanderArrow : Bool -> Element msg
+expanderArrow isExpanded =
+    (if isExpanded then
+        "▾"
+
+     else
+        "▸"
+    )
+        |> Element.text
+        |> Element.el
+            [ Element.width <| Element.px 10
+            , Element.Font.size 12
+            , Element.moveUp 1
+            , Element.moveLeft 1
+            ]
 
 
 {-| Group equal elements together using a custom equality function. Elements will be
@@ -943,49 +1410,58 @@ pageButton config selectedPage pageIds =
         depth =
             List.length pageIds.current - 1
     in
-    Element.link
-        [ Element.paddingEach { left = 16, right = 8, top = 8, bottom = 8 }
-        , Element.width Element.fill
-        , onKey
-            (\arrowKey ->
-                case ( arrowKey, pageIds.previous, pageIds.next ) of
-                    ( ArrowUp, Just previous, _ ) ->
-                        PressedChangePageHotkey previous
+    Element.el
+        [ Element.width Element.fill ]
+        (Element.link
+            [ Element.paddingEach { left = 16, right = 8, top = 8, bottom = 8 }
+            , Element.width Element.fill
+            , onKey
+                (\arrowKey ->
+                    case ( arrowKey, pageIds.previous, pageIds.next ) of
+                        ( ArrowUp, Just previous, _ ) ->
+                            PressedChangePageHotkey previous
 
-                    ( ArrowDown, _, Just next ) ->
-                        PressedChangePageHotkey next
+                        ( ArrowDown, _, Just next ) ->
+                            PressedChangePageHotkey next
 
-                    _ ->
-                        NoOp
-            )
-        , Element.htmlAttribute <| Html.Attributes.id <| pageGroupToString pageIds.current
-        , if pageIds.current == selectedPage then
-            Element.Background.color (pageSelectedButtonColor depth)
+                        _ ->
+                            NoOp
+                )
+            , Element.htmlAttribute <| Html.Attributes.id <| pageGroupToString pageIds.current
+            , if pageIds.current == selectedPage then
+                Element.Background.color (pageSelectedButtonColor depth)
 
-          else
-            Element.mouseOver [ mouseOverButtonColor depth |> Element.Background.color ]
-        ]
-        { url = uiUrl config.relativeUrlPath pageIds.current
-        , label =
-            pageIds.current
-                |> List.reverse
-                |> List.head
-                |> Maybe.withDefault ""
-                |> Element.text
-                |> List.singleton
-                |> Element.paragraph []
-        }
+              else
+                Element.mouseOver [ mouseOverButtonColor depth |> Element.Background.color ]
+            , focusAttributes
+            ]
+            { url = uiUrl config.relativeUrlPath pageIds.current
+            , label =
+                pageIds.current
+                    |> List.reverse
+                    |> List.head
+                    |> Maybe.withDefault ""
+                    |> Element.text
+                    |> List.singleton
+                    |> Element.paragraph []
+            }
+        )
+
+
+focusAttributes =
+    Element.focused [ Element.Background.color lightBlue ]
 
 
 viewSidebarLinks :
     PageBuilder pageModel pageMsg flags
     -> ApplicationConfig (Msg pageMsg) flags
-    -> SuccessModel pageModel flags
+    -> List String
+    -> Set String
     -> Element (Msg pageMsg)
-viewSidebarLinks (PageBuilder pages) config model =
+viewSidebarLinks (PageBuilder pages) config page expandedGroups =
     pages.ids
         |> buildTree
-        |> viewSidebarLinksHelper config model []
+        |> viewSidebarLinksHelper config page expandedGroups []
         |> Element.column
             [ Element.width Element.fill
             , Element.Font.medium
@@ -1022,10 +1498,19 @@ type alias ApplicationConfig msg flags =
     , layoutOptions : List Element.Option
     , layoutAttributes : List (Element.Attribute msg)
     , relativeUrlPath : List String
+    , sidebarTitle : Element msg
     }
 
 
 {-| The default application configuration.
+
+    { flagsDecoder = Decode.succeed ()
+    , layoutOptions = []
+    , layoutAttributes = []
+    , relativeUrlPath = []
+    , title = Element.text "UI explorer"
+    }
+
 -}
 defaultConfig : ApplicationConfig msg ()
 defaultConfig =
@@ -1033,6 +1518,7 @@ defaultConfig =
     , layoutOptions = []
     , layoutAttributes = []
     , relativeUrlPath = []
+    , sidebarTitle = Element.text "UI explorer"
     }
 
 
