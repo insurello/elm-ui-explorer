@@ -5,6 +5,7 @@ import App.Pages.NewSignup as NewSignup
 import App.Pages.Signup.Footer as Footer
 import DesignSystem exposing (Color(..), Font(..), FontSize(..), Padding(..), Spacing(..))
 import Element
+import Element.Font
 import Json.Decode
 import Pixels
 import Time
@@ -115,5 +116,6 @@ main =
                 :: DesignSystem.fontColor Gray800TextBlack
                 :: DesignSystem.font Roboto400Regular
         , relativeUrlPath = [ "elm-ui-explorer" ]
+        , sidebarTitle = Element.el [ Element.padding 4, Element.Font.size 24 ] (Element.text "Example UI")
         }
         pages
