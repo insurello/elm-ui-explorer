@@ -146,11 +146,11 @@ type PageBuilder model msg flags
             |> UiExplorer.nextPage "Second page" (UiExplorer.static (\_ _ -> Element.none))
 
     paths =
-        -- [ "/First%20page", "/Second%page" ]
+        -- [ "/First%20page", "/Second%20page" ]
         getPagePaths [] pages
 
     pathWithSubdomain =
-        -- [ "/subdomain/First%20page", "/subdomain/Second%page" ]
+        -- [ "/subdomain/First%20page", "/subdomain/Second%20page" ]
         getPagePaths [ "subdomain" ] pages
 
 -}
