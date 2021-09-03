@@ -1,6 +1,6 @@
 module UiExplorer exposing
     ( application, defaultConfig, ApplicationConfig, Model, Msg, PageMsg
-    , firstPage, nextPage, groupPages, static, Page, PageSize, PageBuilder
+    , firstPage, nextPage, groupPages, static, getPagePaths, Page, PageSize, PageBuilder
     )
 
 {-|
@@ -25,7 +25,7 @@ You can still use [`elm/html`](https://package.elm-lang.org/packages/elm/html/la
 A "page" is something you can select in the sidebar to display when the app is running.
 Pages can contain a single widget, tables showing every variation of your button components, or an entire login page. It's up to you!
 
-@docs firstPage, nextPage, groupPages, static, Page, PageSize, PageBuilder
+@docs firstPage, nextPage, groupPages, static, getPagePaths, Page, PageSize, PageBuilder
 
 -}
 
@@ -137,6 +137,26 @@ type PageBuilder model msg flags
         , ids : List { pageId : String, pageGroup : List String }
         , pageGroup : List String
         }
+
+
+{-| Get the relative paths to all the pages you've defined.
+
+    pages =
+        UiExplorer.firstPage "First page" (UiExplorer.static (\_ _ -> Element.none))
+            |> UiExplorer.nextPage "Second page" (UiExplorer.static (\_ _ -> Element.none))
+
+    paths =
+        -- [ "/First%20page", "/Second%page" ]
+        getPagePaths [] pages
+
+    pathWithSubdomain =
+        -- [ "/subdomain/First%20page", "/subdomain/Second%page" ]
+        getPagePaths [ "subdomain" ] pages
+
+-}
+getPagePaths : List String -> PageBuilder model msg flags -> List String
+getPagePaths relativeUrlPath (PageBuilder { ids }) =
+    List.map (\a -> (relativeUrlPath ++ a.pageGroup ++ [ a.pageId ]) |> List.map (Url.percentEncode >> (++) "/") |> String.concat) ids
 
 
 {-| A page that doesn't change or react to user input. It's just a view function.
