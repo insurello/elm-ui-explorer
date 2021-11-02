@@ -760,6 +760,7 @@ viewSidebar pages config model =
                 [ Element.width (Element.px (Pixels.inPixels sidebarMinimizedWidth))
                 , Element.Background.color lightGray
                 , Element.height Element.fill
+                , Element.htmlAttribute (Html.Attributes.id maximizeSidebarId)
                 ]
                 { onPress = Just PressedToggleSidebar
                 , label = Element.el [ Element.moveRight 3 ] (Element.text "❯")
@@ -1177,10 +1178,19 @@ minimizeSidebarButton =
         , Element.paddingXY 20 0
         , Element.height Element.fill
         , Element.Font.size 20
+        , Element.htmlAttribute (Html.Attributes.id minimizeSidebarId)
         ]
         { onPress = Just PressedToggleSidebar
         , label = Element.text "❮"
         }
+
+
+minimizeSidebarId =
+    "ui-explorer-minimize-sidebar"
+
+
+maximizeSidebarId =
+    "ui-explorer-maximize-sidebar"
 
 
 lightBlue : Element.Color
