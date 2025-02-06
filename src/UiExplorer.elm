@@ -11,7 +11,13 @@ module UiExplorer exposing
 ![example-image](https://raw.githubusercontent.com/insurello/elm-ui-explorer/master/example-image.png)
 In this image, the panel to the left is called the sidebar and the page selected in it is shown in the remaining space to the right.
 
-Note that this package is built primarily for UI created with [`mdgriffith/elm-ui`](https://package.elm-lang.org/packages/mdgriffith/elm-ui/latest/).
+Note that this package is built primarily for UI created with elm-ui:
+
+  - elm-ui-explorer v1.x: [`mdgriffith/elm-ui`](https://package.elm-lang.org/packages/mdgriffith/elm-ui/latest/).
+  - elm-ui-explorer v2.x: [`insurello/elm-ui`](https://package.elm-lang.org/packages/insurello/elm-ui/latest/)
+
+It's recommended to use elm-ui-explorer v1.x if you aren't Insurello.
+
 You can still use [`elm/html`](https://package.elm-lang.org/packages/elm/html/latest/) with [`Element.html`](https://package.elm-lang.org/packages/mdgriffith/elm-ui/latest/Element#html) though.
 
 
@@ -1063,7 +1069,7 @@ optionGroupView isExpanded selectedItem items itemToString onPress toggleExpand 
                             else
                                 Element.rgba 0 0 0 0
                         , Element.mouseOver [ Element.Background.color lightBlue ]
-                        , Element.focused [ Element.Background.color lightBlue ]
+                        , Element.focusedKeyboardOnly [ Element.Background.color lightBlue ]
                         ]
                         { onPress = onPress option |> Just
                         , label = itemToString option |> Element.text
@@ -1479,7 +1485,7 @@ pageButton config selectedPage pageIds =
 
 
 focusAttributes =
-    Element.focused [ Element.Background.color lightBlue ]
+    Element.focusedKeyboardOnly [ Element.Background.color lightBlue ]
 
 
 viewSidebarLinks :
