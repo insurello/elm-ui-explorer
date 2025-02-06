@@ -35,9 +35,6 @@ import Element exposing (Color, Element)
 import Element.Background
 import Element.Border
 import Element.Font
-import Html exposing (Html)
-import Html.Attributes
-import Shared.Types.WindowSize as WindowSize exposing (WindowSize)
 
 
 type Font

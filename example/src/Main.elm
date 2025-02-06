@@ -7,7 +7,6 @@ import DesignSystem exposing (Color(..), Font(..), FontSize(..), Padding(..), Sp
 import Element
 import Element.Font
 import Json.Decode
-import Pixels
 import Time
 import UiExplorer
 import UiExplorer.BankId
@@ -37,7 +36,7 @@ nextPageWithWidth id page pageWidth =
                         , Element.scrollbars
                         ]
                         (page.view
-                            { pageSize | width = Pixels.pixels pageWidth }
+                            { pageSize | width = pageWidth }
                             model
                         )
         }

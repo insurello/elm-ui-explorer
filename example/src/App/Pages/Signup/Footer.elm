@@ -3,14 +3,12 @@ module App.Pages.Signup.Footer exposing (view, viewWithoutPress)
 import DesignSystem exposing (Color(..), Font(..), FontSize(..), Padding(..), Spacing(..))
 import DesignSystem.Views
 import Element exposing (Element)
-import Pixels
-import Quantity
 import Shared.Types.WindowSize exposing (WindowSize)
 
 
 view : WindowSize -> Int -> Element msg
 view windowSize copyrightYear =
-    if windowSize.width |> Quantity.lessThan (Pixels.pixels 1000) then
+    if windowSize.width < 1000 then
         mobileView windowSize copyrightYear
 
     else
@@ -26,7 +24,7 @@ viewWithoutPress windowSize copyrightYear =
             :: DesignSystem.font Muli400Regular
         )
     <|
-        if windowSize.width |> Quantity.lessThan (Pixels.pixels 1000) then
+        if windowSize.width < 1000 then
             bottomPartMobile windowSize copyrightYear
 
         else
@@ -165,7 +163,7 @@ bottomPartMobile windowSize copyrightYear =
             [ Element.column
                 [ Element.centerX
                 , Element.onLeft <|
-                    if windowSize.width |> Quantity.lessThan (Pixels.pixels 355) then
+                    if windowSize.width < 355 then
                         Element.none
 
                     else

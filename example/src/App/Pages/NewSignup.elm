@@ -16,8 +16,6 @@ import Element exposing (Element)
 import Element.Background
 import Element.Font
 import Html.Attributes
-import Pixels exposing (Pixels)
-import Quantity exposing (Quantity)
 import Shared.Types.WindowSize exposing (WindowSize)
 import SmoothScroll
 import Task
@@ -89,7 +87,7 @@ view windowSize model =
             :: DesignSystem.fontSize TextBase
             :: DesignSystem.font Muli400Regular
         )
-        (if windowSize.width |> Quantity.lessThan (Pixels.pixels 1000) then
+        (if windowSize.width < 1000 then
             mobileView windowSize model
 
          else

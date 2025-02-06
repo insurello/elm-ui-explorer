@@ -11,7 +11,13 @@ module UiExplorer exposing
 ![example-image](https://raw.githubusercontent.com/insurello/elm-ui-explorer/master/example-image.png)
 In this image, the panel to the left is called the sidebar and the page selected in it is shown in the remaining space to the right.
 
-Note that this package is built primarily for UI created with [`mdgriffith/elm-ui`](https://package.elm-lang.org/packages/mdgriffith/elm-ui/latest/).
+Note that this package is built primarily for UI created with elm-ui:
+
+  - elm-ui-explorer v1.x: [`mdgriffith/elm-ui`](https://package.elm-lang.org/packages/mdgriffith/elm-ui/latest/).
+  - elm-ui-explorer v2.x: [`insurello/elm-ui`](https://package.elm-lang.org/packages/insurello/elm-ui/latest/)
+
+It's recommended to use elm-ui-explorer v1.x if you aren't Insurello.
+
 You can still use [`elm/html`](https://package.elm-lang.org/packages/elm/html/latest/) with [`Element.html`](https://package.elm-lang.org/packages/mdgriffith/elm-ui/latest/Element#html) though.
 
 
@@ -44,8 +50,6 @@ import Html exposing (Html)
 import Html.Attributes
 import Html.Events
 import Json.Decode as Decode
-import Pixels exposing (Pixels)
-import Quantity exposing (Quantity)
 import Set exposing (Set)
 import Svg
 import Svg.Attributes
@@ -89,18 +93,9 @@ firstPage id config =
 
 {-| The size of the page your UI gets placed in.
 This is not the same as `Browser.Events.resize` since the UI explorer displays a sidebar that can take up some of the window space.
-
-You'll need [`ianmackenzie/elm-units`](https://package.elm-lang.org/packages/ianmackenzie/elm-units/latest/) in order to use `Quantity Int Pixels`.
-
-    import Pixels
-
-    getWidth : PageSize -> Int
-    getWidth pageSize =
-        Pixels.inPixels pageSize.width
-
 -}
 type alias PageSize =
-    { width : Quantity Int Pixels, height : Quantity Int Pixels }
+    { width : Int, height : Int }
 
 
 {-| All the functions you need for wiring together an interactive page. It's basically just `Browser.element`.
@@ -348,20 +343,20 @@ pageSizeOptionToString pageSizeOption =
             "Native width"
 
 
-pageSizeOptionWidth : PageSizeOption -> Maybe (Quantity Int Pixels)
+pageSizeOptionWidth : PageSizeOption -> Maybe Int
 pageSizeOptionWidth pageSizeOption =
     case pageSizeOption of
         Iphone5 ->
-            Just (Pixels.pixels 320)
+            Just 320
 
         Iphone6 ->
-            Just (Pixels.pixels 375)
+            Just 375
 
         IpadVertical ->
-            Just (Pixels.pixels 768)
+            Just 768
 
         IpadHorizontal ->
-            Just (Pixels.pixels 1024)
+            Just 1024
 
         Native ->
             Nothing
@@ -454,7 +449,7 @@ init config (PageBuilder pages) flagsJson url key =
                 , key = key
 
                 -- We can't know the window size since flags are user defined so we make a guess.
-                , windowSize = { width = Pixels.pixels 1920, height = Pixels.pixels 1080 }
+                , windowSize = { width = 1920, height = 1080 }
                 , minimizeSidebar = False
                 , flags = flags
                 , pageModel = pageModels
@@ -471,8 +466,8 @@ init config (PageBuilder pages) flagsJson url key =
                     |> Task.map
                         (\{ viewport } ->
                             -- The window size should always be integer values so it's safe to round here.
-                            { width = Pixels.pixels (round viewport.width)
-                            , height = Pixels.pixels (round viewport.height)
+                            { width = round viewport.width
+                            , height = round viewport.height
                             }
                         )
                     |> Task.perform WindowResized
@@ -684,7 +679,7 @@ viewSuccess config ((PageBuilder pages) as pages_) model =
             (Element.width Element.fill
                 :: Element.inFront
                     (Element.el
-                        [ Element.height <| Element.px (Pixels.inPixels model.windowSize.height)
+                        [ Element.height <| Element.px model.windowSize.height
                         , Element.Font.size 16
                         ]
                         (viewSidebar pages_ config model)
@@ -697,13 +692,13 @@ viewSuccess config ((PageBuilder pages) as pages_) model =
                 [ Element.width Element.fill
                 , Element.height Element.fill
                 ]
-                [ Element.el [ Element.width (Element.px (Pixels.inPixels actualSidebarWidth)) ] Element.none
+                [ Element.el [ Element.width (Element.px actualSidebarWidth) ] Element.none
                 , Element.el
                     (Element.alignTop
                         :: Element.width
                             (case pageSizeOptionWidth model.pageSizeOption of
                                 Just width ->
-                                    Element.px (Pixels.inPixels width)
+                                    Element.px width
 
                                 Nothing ->
                                     Element.fillPortion 999999999
@@ -737,14 +732,14 @@ viewSuccess config ((PageBuilder pages) as pages_) model =
     }
 
 
-sidebarWidth : Quantity number Pixels
+sidebarWidth : number
 sidebarWidth =
-    Pixels.pixels 210
+    210
 
 
-sidebarMinimizedWidth : Quantity number Pixels
+sidebarMinimizedWidth : number
 sidebarMinimizedWidth =
-    Pixels.pixels 16
+    16
 
 
 viewSidebar :
@@ -757,7 +752,7 @@ viewSidebar pages config model =
         Element.el
             [ Element.height Element.fill ]
             (Element.Input.button
-                [ Element.width (Element.px (Pixels.inPixels sidebarMinimizedWidth))
+                [ Element.width (Element.px sidebarMinimizedWidth)
                 , Element.Background.color lightGray
                 , Element.height Element.fill
                 , Element.htmlAttribute (Html.Attributes.id maximizeSidebarId)
@@ -769,7 +764,7 @@ viewSidebar pages config model =
 
     else
         Element.column
-            [ Element.width (Element.px (Pixels.inPixels sidebarWidth))
+            [ Element.width (Element.px sidebarWidth)
             , Element.height Element.fill
 
             -- For some reason a horizontal scrollbar pops up unless we include this.
@@ -1063,7 +1058,7 @@ optionGroupView isExpanded selectedItem items itemToString onPress toggleExpand 
                             else
                                 Element.rgba 0 0 0 0
                         , Element.mouseOver [ Element.Background.color lightBlue ]
-                        , Element.focused [ Element.Background.color lightBlue ]
+                        , Element.focusedKeyboardOnly [ Element.Background.color lightBlue ]
                         ]
                         { onPress = onPress option |> Just
                         , label = itemToString option |> Element.text
@@ -1154,21 +1149,21 @@ listNeighborsHelper list { current, next } newList =
 
 contentSize : SuccessModel pageModel flags -> PageSize
 contentSize model =
-    if model.minimizeSidebar then
-        { width =
+    let
+        pageWidth =
             pageSizeOptionWidth model.pageSizeOption
                 |> Maybe.withDefault model.windowSize.width
-                |> Quantity.minus sidebarMinimizedWidth
-        , height = model.windowSize.height
-        }
 
-    else
-        { width =
-            pageSizeOptionWidth model.pageSizeOption
-                |> Maybe.withDefault model.windowSize.width
-                |> Quantity.minus sidebarWidth
-        , height = model.windowSize.height
-        }
+        actualSidebarWidth =
+            if model.minimizeSidebar then
+                sidebarMinimizedWidth
+
+            else
+                sidebarWidth
+    in
+    { width = pageWidth - actualSidebarWidth
+    , height = model.windowSize.height
+    }
 
 
 minimizeSidebarButton : Element (Msg pageMsg)
@@ -1479,7 +1474,7 @@ pageButton config selectedPage pageIds =
 
 
 focusAttributes =
-    Element.focused [ Element.Background.color lightBlue ]
+    Element.focusedKeyboardOnly [ Element.Background.color lightBlue ]
 
 
 viewSidebarLinks :
@@ -1505,7 +1500,7 @@ subscriptions (PageBuilder pages) model =
         [ Browser.Events.onResize
             (\width height ->
                 WindowResized
-                    { width = Pixels.pixels width, height = Pixels.pixels height }
+                    { width = width, height = height }
             )
         , case model of
             FlagsParsed successModel ->
