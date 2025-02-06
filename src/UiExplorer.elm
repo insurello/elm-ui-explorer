@@ -13,10 +13,10 @@ In this image, the panel to the left is called the sidebar and the page selected
 
 Note that this package is built primarily for UI created with elm-ui:
 
-  - elm-ui-explorer v1.x: [`mdgriffith/elm-ui`](https://package.elm-lang.org/packages/mdgriffith/elm-ui/latest/).
-  - elm-ui-explorer v2.x: [`insurello/elm-ui`](https://package.elm-lang.org/packages/insurello/elm-ui/latest/)
+  - elm-ui-explorer v1.x and v2.x: [`mdgriffith/elm-ui`](https://package.elm-lang.org/packages/mdgriffith/elm-ui/latest/).
+  - elm-ui-explorer v3.x+: [`insurello/elm-ui`](https://package.elm-lang.org/packages/insurello/elm-ui/latest/)
 
-It's recommended to use elm-ui-explorer v1.x if you aren't Insurello.
+It's recommended to use elm-ui-explorer v2.1.1 if you aren't Insurello.
 
 You can still use [`elm/html`](https://package.elm-lang.org/packages/elm/html/latest/) with [`Element.html`](https://package.elm-lang.org/packages/mdgriffith/elm-ui/latest/Element#html) though.
 
