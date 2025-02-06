@@ -9,8 +9,6 @@ import DesignSystem exposing (Color(..), Font(..), FontSize(..), Padding(..), Sp
 import Element exposing (Element)
 import Element.Font
 import Html.Attributes
-import Pixels
-import Quantity
 import Shared.Types.WindowSize exposing (WindowSize)
 import Time
 import Url exposing (Url)
@@ -63,7 +61,7 @@ view windowSize model =
             :: DesignSystem.fontSize TextBase
             :: DesignSystem.font Muli400Regular
         )
-        (if windowSize.width |> Quantity.lessThan (Pixels.pixels 1000) then
+        (if windowSize.width < 1000 then
             mobileView windowSize model
 
          else
@@ -172,7 +170,7 @@ mobileContent windowSize bankId =
                 ]
                 [ descriptionText ]
             ]
-        , if windowSize.width |> Quantity.lessThan (Pixels.pixels 600) then
+        , if windowSize.width < 600 then
             Element.image
                 [ Element.htmlAttribute <| Html.Attributes.style "pointer-events" "none"
                 , Element.width Element.fill

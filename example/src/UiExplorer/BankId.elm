@@ -8,8 +8,6 @@ import DesignSystem exposing (Padding(..), Spacing(..))
 import Element exposing (Element)
 import Form
 import Form.Field
-import Pixels
-import Quantity
 import Shared.SwedishPersonalNumber as PersonalNumber
 import Shared.Types.WindowSize exposing (WindowSize)
 import Time
@@ -46,7 +44,7 @@ view : WindowSize -> () -> Element BankId.Msg
 view windowSize () =
     let
         layout =
-            if windowSize.width |> Quantity.lessThan (Pixels.pixels 500) then
+            if windowSize.width < 500 then
                 MobileLayout
 
             else
