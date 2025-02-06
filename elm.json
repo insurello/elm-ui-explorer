@@ -3,7 +3,7 @@
     "name": "insurello/elm-ui-explorer",
     "summary": "Explore and interact with UI components and pages you've created",
     "license": "MIT",
-    "version": "2.1.1",
+    "version": "3.0.0",
     "exposed-modules": [
         "UiExplorer"
     ],
