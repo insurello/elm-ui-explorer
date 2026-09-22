@@ -7,38 +7,32 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v1
+      - uses: actions/checkout@v7
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v1
+      - uses: actions/setup-node@v7
         with:
-          node-version: "12"
+          node-version: "24"
+          cache: npm
 
       - name: Cache node_modules
-        uses: actions/cache@v1
+        uses: actions/cache@v6
         with:
           path: node_modules
-          key: node_modules-${{ hashFiles('package-lock.json') }}
+          key: node_modules-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
 
       - name: Cache elm
-        uses: actions/cache@v1
+        uses: actions/cache@v6
         with:
           path: ~/.elm
           key: elm-${{ hashFiles('elm.json') }}
+          restore-keys: elm-
 
-      - name: Run workflow
-        run: |
-          test -d node_modules || npm ci
-          npm test
-          npm run build
-        env:
-          CI: true
+      - name: Install dependencies
+        run: test -d node_modules || npm ci
 
-      - name: Deploy
-        if: github.ref == 'refs/heads/master'
-        uses: JamesIves/github-pages-deploy-action@releases/v3
-        with:
-          ACCESS_TOKEN: ${{ secrets.ACCESS_TOKEN }}
-          BRANCH: gh-pages # The branch the action should deploy to.
-          FOLDER: example/build # The folder the action should deploy.
+      - run: npm test
+
+      - name: Check package docs
+        run: npx --no-install elm make --docs=/tmp/docs.json
+
 
